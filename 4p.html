@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🔫 Emoji轮盘赌 · 四人局</title>
+<style>
+:root{
+  --bg:#0d0f14; --felt:#1d5c3f; --felt2:#164a33; --line:#3c2a1e;
+  --ink:#f0ead8; --dim:#8b8577; --gold:#e9b949; --red:#d4473f; --blue:#3d7fef;
+  --card:#171a21;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,"PingFang SC","Noto Sans SC",system-ui,sans-serif;overflow:hidden}
+body{display:flex;align-items:center;justify-content:center}
+.screen{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+  padding:14px;overflow-y:auto;gap:10px}
+.hidden{display:none!important}
+h1{font-size:clamp(20px,5.6vmin,30px);margin:6px 0 2px;letter-spacing:.06em}
+.sub{color:var(--dim);font-size:13px;margin:0}
+.logo{font-size:clamp(34px,10vmin,54px);filter:drop-shadow(0 6px 16px #0008)}
+input{background:#1d2029;border:1px solid #2f3542;color:var(--ink);border-radius:10px;
+  padding:11px 13px;font-size:15px;outline:none;width:100%}
+input:focus{border-color:var(--gold)}
+button{border:0;border-radius:11px;padding:12px 14px;font-size:15px;color:var(--ink);
+  background:#252a34;cursor:pointer;transition:.15s;font-family:inherit}
+button:active{transform:scale(.97)}
+button.primary{background:linear-gradient(180deg,#e9b949,#c48f22);color:#2a1f05;font-weight:700}
+button.go{background:linear-gradient(180deg,#3f8f5f,#2b6b46)}
+button.bad{background:linear-gradient(180deg,#d4473f,#a4322b)}
+button:disabled{opacity:.45;pointer-events:none}
+.wrap{width:min(560px,100%);display:flex;flex-direction:column;gap:10px}
+.row{display:flex;gap:8px;align-items:center}
+.modes{display:flex;gap:8px}
+.modes button{flex:1;font-size:13px;padding:10px}
+.modes button.on{background:#2b3a2f;border:1px solid #4a7a58;color:#9be0b4}
+.hint{color:var(--dim);font-size:12px;line-height:1.6;margin:0;text-align:center}
+
+/* 大厅 */
+.lbhead{display:flex;align-items:center;gap:10px;font-size:14px}
+.lbhead b{font-size:26px;letter-spacing:.16em;color:var(--gold)}
+.seatlist{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+.seatrow{background:var(--card);border:1px solid #252a34;border-radius:12px;padding:10px 12px;
+  display:flex;align-items:center;gap:8px;font-size:13px}
+.seatrow .f{font-size:22px}
+.seatrow.empty{opacity:.45;border-style:dashed}
+.hostpanel{background:var(--card);border:1px solid #252a34;border-radius:12px;padding:10px;width:100%;font-size:13px}
+.tg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}
+.tg label{display:flex;align-items:center;gap:6px;background:#1d2029;border-radius:9px;padding:8px;font-size:12px}
+.tg input{width:auto;appearance:none;width:16px;height:16px;border-radius:5px;background:#2f3542;position:relative;padding:0}
+.tg input:checked{background:#3f8f5f}
+.chatbox{width:100%;flex:1;min-height:90px;overflow-y:auto;background:#111318;border-radius:12px;
+  padding:8px;font-size:12px;line-height:1.7;color:#cfcabb}
+.chatrow{display:flex;gap:8px;width:100%;padding-top:6px}
+.chatrow button{padding:10px 14px;font-size:13px}
+.chatbox .who{color:var(--gold)}
+.chatbox .sys{color:#8fb6ff}
+.chatbox .feed{color:#a8b0bd}
+
+/* 对局 */
+.ghead{width:100%;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);padding:0 2px;flex:none;min-height:30px}
+.ghead .sp{flex:1}
+.ghead button{padding:6px 10px;font-size:12px;border-radius:8px}
+.table{position:relative;flex:none;width:min(720px,95vw);height:min(70vh,504px);
+  background:radial-gradient(ellipse at 50% 45%,var(--felt),var(--felt2) 70%,#0e3625);
+  border:7px solid #4a3122;border-radius:22px;
+  box-shadow:0 0 0 3px #2a1a12,0 18px 40px #000a,inset 0 0 60px #0006}
+.table:after{content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;
+  background:repeating-linear-gradient(90deg,#fff0 0 39px,#fff1 39px 40px),
+             repeating-linear-gradient(0deg,#fff0 0 39px,#fff1 39px 40px);opacity:.12}
+.gunpos{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:3}
+.gunpos .g{font-size:clamp(26px,7vmin,42px);filter:drop-shadow(0 5px 10px #000a)}
+.gunpos .cnt{font-size:11px;color:#dfe8d9;background:#0008;padding:2px 8px;border-radius:20px;margin-top:2px}
+
+.seatp{position:absolute;z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px;
+  transition:.2s}
+.s-bot{left:50%;bottom:2%;transform:translateX(-50%)}
+.s-top{left:50%;top:2%;transform:translateX(-50%)}
+.s-left{left:1.5%;top:50%;transform:translateY(-50%)}
+.s-right{right:1.5%;top:50%;transform:translateY(-50%)}
+.face{font-size:clamp(26px,7vmin,40px);line-height:1;transition:.2s;filter:drop-shadow(0 4px 8px #000a)}
+.seatp.turn .face{transform:scale(1.14);filter:drop-shadow(0 0 14px #ffd85e)}
+.seatp.dead .face{filter:grayscale(1) brightness(.5);transform:rotate(28deg) scale(.9)}
+.nm{font-size:calc(clamp(9px,1.9vmin,12px));color:#dfe6d8;background:#0009;padding:1px 7px;border-radius:20px;
+  max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpb{display:flex;gap:2px;font-size:clamp(8px,1.7vmin,11px)}
+.slots{display:flex;gap:2px}
+.slots i{width:calc(clamp(8px,1.8vmin,12px));height:calc(clamp(8px,1.8vmin,12px));border-radius:3px;
+  background:#fbfbfb22;border:1px solid #ffffff22;display:inline-block}
+.hh{position:absolute;font-size:clamp(15px,4vmin,22px);line-height:1;opacity:.95;z-index:-1}
+.s-bot .hh{left:50%;top:-1.35em;transform:translateX(-50%)}
+.s-top .hh{left:50%;bottom:-1.35em;transform:translateX(-50%) rotate(180deg)}
+.s-left .hh{right:-1.1em;top:34%;transform:translateY(-50%) rotate(90deg)}
+.s-right .hh{left:-1.1em;top:34%;transform:translateY(-50%) rotate(-90deg)}
+@media (max-width:520px){
+  .table{width:95vw;height:min(70svh,102vw)}
+  .s-left{left:1%;top:47%} .s-right{right:1%;top:47%}
+  .s-top{top:1.5%} .s-bot{bottom:1.5%}
+  .nm{font-size:10px;max-width:66px}
+}
+.badges{display:flex;gap:2px;font-size:clamp(8px,1.7vmin,11px);min-height:11px}
+
+/* 底部操作 */
+.bar{width:100%;display:flex;gap:7px;flex-wrap:wrap;justify-content:center;padding-top:2px;flex:none}
+.bar button{font-size:13px;padding:10px 13px;border-radius:10px}
+.bar .self{background:linear-gradient(180deg,#3d7fef,#2b5fc0)}
+.bar .foe{background:linear-gradient(180deg,#d4473f,#a4322b)}
+.hand{width:100%;display:flex;gap:5px;flex-wrap:wrap;justify-content:center;padding:2px 0;flex:none}
+.hand .it{background:#1d2029;border:1px solid #333a47;border-radius:9px;padding:6px 9px;font-size:12px;
+  display:flex;align-items:center;gap:5px;cursor:pointer}
+.hand .it span{font-size:15px}
+.hand .it.dim{opacity:.35;pointer-events:none}
+.tips{font-size:11px;color:var(--dim);height:14px}
+.over{position:fixed;inset:0;background:#000a;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;z-index:30;backdrop-filter:blur(3px)}
+.over .big{font-size:clamp(26px,7vmin,40px)}
+.over .txt{font-size:15px}
+.logpanel{position:fixed;left:0;right:0;bottom:0;max-height:52%;background:#111318ee;z-index:20;
+  border-top-left-radius:16px;border-top-right-radius:16px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.logpanel .chatbox{min-height:0}
+.logpanel .x{position:absolute;right:10px;top:8px;padding:4px 9px;font-size:12px;border-radius:8px}
+.pickmask{position:fixed;inset:0;background:#000b;z-index:25;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;padding:20px}
+.pickmask .t{font-size:14px;color:#dfe6d8}
+.pickmask button{min-width:180px}
+</style>
+</head>
+<body>
+
+<!-- 主页 -->
+<div id="home" class="screen">
+  <div class="logo">🔫</div>
+  <h1>Emoji 轮盘赌</h1>
+  <p class="sub">四人桌 · AI 补位 · 观战席</p>
+  <div class="wrap" style="margin-top:10px">
+    <input id="name" placeholder="你的名字（最多 12 字）" maxlength="12">
+    <div class="modes">
+      <button data-mode="casual" class="on">休闲 · 原创全开</button>
+      <button data-mode="ranked">排位 · 关强干扰</button>
+    </div>
+    <button id="btnCreate" class="primary">建 房 开 赌</button>
+    <div class="row">
+      <input id="code" placeholder="房号" maxlength="6" inputmode="numeric">
+      <button id="btnJoin" style="white-space:nowrap">加入</button>
+    </div>
+    <p class="hint">房主那台机器就是服务器，房主关页面 = 散场。<br>房主会拿到全部数据，别跟陌生人开排位。</p>
+  </div>
+</div>
+
+<!-- 大厅 -->
+<div id="lobby" class="screen hidden">
+  <div class="lbhead">房号 <b id="lbCode">------</b><button id="btnCopy">复制</button></div>
+  <div class="seatlist" id="lbSeats"></div>
+  <div class="hint" id="lbSpec"></div>
+  <div class="hostpanel hidden" id="lbHost">
+    <div class="row" style="justify-content:space-between">原创道具开关 <b id="lbMode"></b></div>
+    <div class="tg" id="lbToggles"></div>
+  </div>
+  <button id="btnStart" class="primary hidden" style="width:100%">开 局</button>
+  <p class="hint" id="lbWait">等房主开局…</p>
+  <div class="chatbox" id="lbChat"></div>
+  <div class="chatrow"><input id="lbChatIn" placeholder="说点什么"><button id="lbChatSend">发</button></div>
+</div>
+
+<!-- 对局 -->
+<div id="game" class="screen hidden" style="justify-content:center">
+  <div class="ghead">
+    <span id="gRoom"></span><span class="sp"></span>
+    <span id="gPhase"></span><span id="gRound"></span>
+    <button id="btnLog">聊</button>
+  </div>
+  <div class="table" id="table">
+    <div class="gunpos"><div class="g">🔫</div><div class="cnt" id="gCount">—</div></div>
+  </div>
+  <div class="bar" id="gBar"></div>
+  <div class="hand" id="gHand"></div>
+  <div class="tips" id="gTip"></div>
+</div>
+
+<div class="over hidden" id="gOver"></div>
+
+<div class="logpanel hidden" id="gLog">
+  <button class="x" id="btnLogClose">收起</button>
+  <div class="chatbox" id="gChat"></div>
+  <div class="chatrow"><input id="gChatIn" placeholder="说点什么"><button id="gChatSend">发</button></div>
+</div>
+
+<script>
+/**
+ * 极简 MQTT 3.1.1 over WebSocket（只为这个游戏服务）
+ * 支持 CONNECT(+遗嘱) / SUBSCRIBE / PUBLISH(qos0) / PING。不依赖任何第三方库。
+ */
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+function u32(n) {
+  return [n >> 24 & 255, n >> 16 & 255, n >> 8 & 255, n & 255];
+}
+function varLen(n) {
+  const out = [];
+  do { let d = n % 128; n = Math.floor(n / 128); if (n > 0) d |= 128; out.push(d); } while (n > 0);
+  return out;
+}
+function str(s) { const b = [...enc.encode(s)]; return [b.length >> 8, b.length & 255, ...b]; }
+
+class MqttLite {
+  constructor(url, opts = {}) {
+    this.url = url;
+    this.clientId = opts.clientId || ('c' + Math.random().toString(16).slice(2));
+    this.onMessage = opts.onMessage || (() => {});
+    this.onOpen = opts.onOpen || (() => {});
+    this.onClose = opts.onClose || (() => {});
+    this.will = opts.will || null;     // {topic, payload}
+    this.pid = 1;
+    this.ws = null;
+    this.queue = [];
+    this.alive = false;
+  }
+
+  connect() {
+    this.ws = new WebSocket(this.url, ['mqtt']);
+    this.ws.binaryType = 'arraybuffer';
+    this.ws.onopen = () => {
+      const flags = 0x02 | (this.will ? 0x04 : 0);   // clean session + will
+      const payload = [...str(this.clientId)];
+      if (this.will) { payload.push(...str(this.will.topic), ...str(this.will.payload)); }
+      const head = [0x10];
+      const body = [0x00, 0x04, 0x4D, 0x51, 0x54, 0x54, 0x04, flags, 0x00, 0x3C, ...payload];
+      this.ws.send(new Uint8Array([...head, ...varLen(body.length), ...body]));
+      this.ping = setInterval(() => this.raw([0xC0, 0x00]), 30000);
+    };
+    this.ws.onmessage = e => this.onPacket(new Uint8Array(e.data));
+    this.ws.onclose = () => { clearInterval(this.ping); this.alive = false; this.onClose(); };
+    this.ws.onerror = () => {};
+    return this;
+  }
+
+  raw(bytes) { if (this.ws && this.ws.readyState === 1) this.ws.send(new Uint8Array(bytes)); }
+
+  onPacket(b) {
+    const type = b[0] >> 4;
+    if (type === 2) {            // CONNACK
+      this.alive = true;
+      this.queue.forEach(f => f());
+      this.queue = [];
+      this.onOpen();
+    } else if (type === 3) {     // PUBLISH
+      let i = 1;
+      while (b[i] & 128) i++;    // 跳过变长长度
+      i++;
+      const tlen = (b[i] << 8) | b[i + 1]; i += 2;
+      const topic = dec.decode(b.slice(i, i + tlen)); i += tlen;
+      const qos = (b[0] & 0x06) >> 1;
+      if (qos > 0) i += 2;
+      const payload = dec.decode(b.slice(i));
+      this.onMessage(topic, payload);
+    }
+  }
+
+  subscribe(topic) {
+    const run = () => {
+      const pid = this.pid++;
+      const body = [pid >> 8, pid & 255, ...str(topic), 0x00];
+      this.raw([0x82, ...varLen(body.length), ...body]);
+    };
+    this.alive ? run() : this.queue.push(run);
+  }
+
+  publish(topic, payload, retain = false) {
+    const body = [...str(topic), ...enc.encode(String(payload))];
+    const run = () => this.raw([0x30 | (retain ? 0x01 : 0), ...varLen(body.length), ...body]);
+    this.alive ? run() : this.queue.push(run);
+  }
+
+  close() { clearInterval(this.ping); try { this.ws.close(); } catch {} }
+}
+
+/**
+ * 四人恶魔轮盘 —— 权威规则引擎（纯逻辑，不碰网络、不碰 UI）
+ * 所有判定只在这里发生；客户端拿到的视图一定不含弹仓顺序。
+ */
+
+const ORIGINAL_ITEMS = ['saw', 'beer', 'glass', 'cig', 'cuff', 'phone', 'adr', 'inverter', 'pills'];
+const ORIGINAL_NAME = {
+  saw: '手锯', beer: '啤酒', glass: '放大镜', cig: '香烟', cuff: '手铐',
+  phone: '一次性手机', adr: '肾上腺素', inverter: '极性转换器', pills: '过期药',
+};
+
+const CREATIVE_ITEMS = ['shuffle', 'swap', 'seal', 'echo', 'transfer', 'fuse', 'loot'];
+const CREATIVE_NAME = {
+  shuffle: '重洗袋', swap: '交换手套', seal: '封缄贴', echo: '共鸣贴纸',
+  transfer: '转移栓', fuse: '延时引信', loot: '掠夺袋',
+};
+
+/** 排位默认关掉的强干扰类 */
+const RANKED_OFF = ['shuffle', 'echo', 'swap', 'loot', 'transfer'];
+
+const ITEM_NAME = { ...ORIGINAL_NAME, ...CREATIVE_NAME };
+const MAX_ITEMS = 8;
+
+/** 三阶段：淘汰 0 人 → 阶段1；剩 3 人 → 阶段2 倒数轮；剩 2 人 → 阶段3 拔监测 */
+const PHASES = {
+  1: { id: 1, hp: 3, reload: [6, 10], grant: 2, label: '常规轮' },
+  2: { id: 2, hp: 2, reload: [4, 8], grant: 2, label: '倒数轮' },
+  3: { id: 3, hp: 1, reload: [3, 6], grant: 3, label: '决战轮' },
+};
+
+const rnd = n => Math.floor(Math.random() * n);
+const shuffleArr = a => {
+  for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+};
+
+class Engine {
+  /**
+   * @param seats [{id,name,ai}] 最多 4
+   * @param cfg  { creative:{id:bool}, sudden:bool }
+   */
+  constructor(seats, cfg = {}) {
+    if (seats.length < 2 || seats.length > 4) throw new Error('需要 2~4 名玩家');
+    this.cfg = { creative: { ...Object.fromEntries(CREATIVE_ITEMS.map(k => [k, true])), ...(cfg.creative || {}) } };
+    this.phase = seats.length >= 4 ? 1 : seats.length === 3 ? 2 : 3;
+    const hp0 = PHASES[this.phase].hp;
+    this.seats = seats.map((s, i) => ({
+      idx: i, id: s.id, name: s.name || `玩家${i + 1}`, ai: !!s.ai,
+      hp: hp0, maxHp: hp0, items: [], alive: true,
+      sealed: false, extraShot: false, transferTo: null, skipNext: false,
+    }));
+    this.turn = 0;                 // 座位下标
+    this.round = 1;
+    this.chamber = [];             // 'live' | 'blank'，只有引擎知道顺序
+    this.revealed = null;          // 放大镜看过的那一发，仅持有者可见
+    this.revealedFor = null;
+    this.lastCuffTarget = null;
+    this.lastSealTarget = null;
+    this.echoNext = false;         // 共鸣贴纸：下一个道具效果广播
+    this.extraAction = false;      // 延时引信给的额外行动（只准开枪）
+    this.over = false;
+    this.winner = null;
+    this.events = [];
+    this.seq = 0;
+    this.reload(true);
+  }
+
+  /* ---------------- 基础 ---------------- */
+  get aliveSeats() { return this.seats.filter(s => s.alive); }
+  get phaseCfg() { return PHASES[this.phase]; }
+  byId(id) { return this.seats.find(s => s.id === id); }
+  cur() { return this.seats[this.turn]; }
+
+  emit(type, data = {}) {
+    const ev = { seq: ++this.seq, type, ...data };
+    this.events.push(ev);
+    // 事件里永远不带弹仓顺序
+    return ev;
+  }
+
+  pool(seat) {
+    const ids = [...ORIGINAL_ITEMS, ...CREATIVE_ITEMS.filter(k => this.cfg.creative[k])];
+    return ids;
+  }
+
+  reload(first = false) {
+    const [lo, hi] = this.phaseCfg.reload;
+    const total = lo + rnd(hi - lo + 1);
+    const live = 1 + rnd(total - 1);
+    const blank = total - live;
+    this.chamber = shuffleArr([...Array(live).fill('live'), ...Array(blank).fill('blank')]);
+    this.revealed = null; this.revealedFor = null;
+    this.emit('reload', { total, live, blank, round: this.round });
+    // 原版规则：每轮装填后给存活玩家发道具（阶段1发得少）
+    if (!first) this.grantAll();
+    return { total, live, blank };
+  }
+
+  grantAll() {
+    const n = this.phaseCfg.grant;
+    for (const s of this.aliveSeats) {
+      for (let i = 0; i < n; i++) {
+        if (s.items.length >= MAX_ITEMS) break;
+        const p = this.pool(s);
+        s.items.push(p[rnd(p.length)]);
+      }
+    }
+    this.emit('grant', { count: n, seats: this.aliveSeats.map(s => ({ id: s.id, items: s.items.length })) });
+  }
+
+  /** 阶段推进：淘汰人数决定 */
+  syncPhase() {
+    const alive = this.aliveSeats.length;
+    const want = alive >= 4 ? 1 : alive === 3 ? 2 : 3;
+    if (want === this.phase) return false;
+    this.phase = want;
+    for (const s of this.aliveSeats) { s.hp = this.phaseCfg.hp; s.maxHp = this.phaseCfg.hp; s.sealed = false; s.extraShot = false; s.transferTo = null; }
+    this.emit('phase', { phase: this.phase, label: this.phaseCfg.label, hp: this.phaseCfg.hp });
+    return true;
+  }
+
+  /* ---------------- 回合 ---------------- */
+  passTurn() {
+    const c = this.cur();
+    // 延时引信：本次结算后再来一次，仍然只能开枪（不清封缄、不清锯）
+    if (this.extraAction) this.extraAction = false;      // 额外那一枪打完，正常交回合
+    if (c && c.extraShot) {
+      c.extraShot = false; this.extraAction = true;
+      this.emit('extra', { seat: c.id }); return;
+    }
+    if (c) c.sealed = false;           // 封缄只锁他自己那一个回合
+    let guard = 0;
+    while (guard++ < 12) {
+      this.turn = (this.turn + 1) % this.seats.length;
+      const s = this.cur();
+      if (!s.alive) continue;
+      if (s.skipNext) {                 // 手铐：直接跳过他的回合
+        s.skipNext = false;
+        this.emit('skip', { seat: s.id, reason: 'cuff' });
+        continue;
+      }
+      break;
+    }
+    this.emit('turn', { seat: this.cur().id });
+  }
+
+  /** 开枪：target = 自己或别人 */
+  shoot(actorId, targetId) {
+    if (this.over) throw new Error('对局已结束');
+    const a = this.byId(actorId), t = this.byId(targetId);
+    if (!a || !a.alive) throw new Error('出手人不在场');
+    if (a !== this.cur()) throw new Error('没轮到你');
+    if (!t || !t.alive) throw new Error('目标不在场');
+    if (!this.chamber.length) this.reload();
+
+    const shell = this.chamber.shift();
+    this.revealed = null; this.revealedFor = null;
+    const dmg = shell === 'live' ? (a.sawed ? 2 : 1) : 0;
+    a.sawed = false;
+
+    let victim = t, transferred = false;
+    if (dmg > 0 && t !== a && a.transferTo) {
+      const alt = this.byId(a.transferTo);
+      if (alt && alt.alive && alt !== a) { victim = alt; transferred = true; }
+    }
+    a.transferTo = null;
+
+    if (dmg > 0) {
+      victim.hp -= dmg;
+      if (victim.hp <= 0) { victim.hp = 0; victim.alive = false; victim.items = []; }
+    }
+    this.emit('shot', {
+      by: a.id, target: t.id, victim: victim.id, shell, dmg,
+      transferred, hp: victim.hp, alive: victim.alive, remaining: this.chamber.length,
+    });
+
+    if (!victim.alive) this.checkGameOver();
+    if (this.over) return this.events.at(-1);
+
+    // 空弹打自己 → 保留回合；其余 → 换手
+    const keep = shell === 'blank' && t === a;
+    if (!keep) this.passTurn();
+    else this.emit('keep', { seat: a.id });
+
+    if (!this.chamber.length) { this.round++; this.syncPhase(); this.reload(); }
+    this.settle();
+    return this.events.at(-1);
+  }
+
+  /** 把“血量归零 / 当前回合人已死”统一收尾 */
+  settle() {
+    for (const s of this.seats) {
+      if (s.alive && s.hp <= 0) { s.hp = 0; s.alive = false; s.items = []; }
+    }
+    this.checkGameOver();
+    if (!this.over && (!this.cur() || !this.cur().alive)) this.passTurn();
+  }
+
+  checkGameOver() {
+    const alive = this.aliveSeats;
+    if (alive.length <= 1) {
+      this.over = true;
+      this.winner = alive[0] ? alive[0].id : null;
+      this.emit('end', { winner: this.winner });
+    } else {
+      this.syncPhase();
+    }
+  }
+
+  /* ---------------- 道具 ---------------- */
+  canUse(actorId, item, targetId) {
+    const a = this.byId(actorId);
+    if (!a || !a.alive) return '不在场';
+    if (a !== this.cur()) return '没轮到你';
+    if (a.sealed) return '被封缄，本回合不能用道具';
+    if (this.extraAction) return '额外行动只能开枪';
+    if (!a.items.includes(item)) return '没有这件道具';
+    if (['swap', 'seal', 'loot', 'transfer', 'cuff', 'adr'].includes(item)) {
+      const t = this.byId(targetId);
+      if (!t || !t.alive || t === a) return '要选一名其他存活玩家';
+      if (item === 'seal' && this.lastSealTarget === targetId) return '同一目标不能连续封缄';
+      if (item === 'cuff' && this.lastCuffTarget === targetId) return '同一目标不能连续上手铐';
+      if (item === 'transfer' && !this.chamber.length) return '膛里没弹';
+    }
+    return null;
+  }
+
+  useItem(actorId, item, targetId) {
+    const err = this.canUse(actorId, item, targetId);
+    if (err) throw new Error(err);
+    const a = this.byId(actorId);
+    a.items.splice(a.items.indexOf(item), 1);
+    this.applyEffect(a, item, targetId);
+    this.emit('item', { by: a.id, item, itemName: ITEM_NAME[item], target: targetId || null });
+
+    // 共鸣贴纸：下一个道具效果同步给所有存活玩家
+    if (this.echoNext && item !== 'echo') {
+      for (const s of this.aliveSeats) {
+        if (s === a) continue;
+        this.applyEffect(s, item, targetId, true);
+      }
+      this.emit('echoSplash', { item, itemName: ITEM_NAME[item] });
+      this.echoNext = false;
+    } else if (item === 'echo') {
+      this.echoNext = true;
+    }
+    if (!this.chamber.length) { this.round++; this.syncPhase(); this.reload(); }
+    this.settle();
+    return this.events.at(-1);
+  }
+
+  /** 单个道具效果；mirror=true 表示共鸣复制（不重复扣道具） */
+  applyEffect(seat, item, targetId, mirror = false) {
+    const t = targetId ? this.byId(targetId) : null;
+    switch (item) {
+      case 'saw': seat.sawed = true; break;
+      case 'beer': if (this.chamber.length) this.chamber.shift(); this.revealed = null; break;
+      case 'glass':
+        this.revealed = this.chamber[0] || null;
+        this.revealedFor = seat.id; break;
+      case 'cig': seat.hp = Math.min(seat.maxHp, seat.hp + 1); break;
+      case 'cuff': if (t && t.alive) { t.skipNext = true; t.cuffedBy = seat.id; this.lastCuffTarget = t.id; } break;
+      case 'phone': {
+        // 原版：随机展示膛里某一发的具体内容（位置 + 实/空），只给拿手机的人
+        const len = this.chamber.length;
+        if (len) {
+          const pos = rnd(len);
+          seat.phonePeek = { pos, type: this.chamber[pos], total: len };
+        }
+        break;
+      }
+      case 'adr': {
+        // 原版：偷对面一件道具，并且立刻用掉
+        if (!t || !t.alive || !t.items.length) break;
+        const i = rnd(t.items.length);
+        const got = t.items.splice(i, 1)[0];
+        this.applyEffect(seat, got, seat.id);       // 自己对自己用，避免再选目标
+        this.emit('steal', { from: t.id, to: seat.id, item: got, itemName: ITEM_NAME[got] });
+        break;
+      }
+      case 'inverter': if (this.chamber.length) this.chamber[0] = this.chamber[0] === 'live' ? 'blank' : 'live'; break;
+      case 'pills':
+        // 原版：一半概率回 1 血，否则掉 1 血，最低留 1 点、不会吃死自己
+        if (Math.random() < 0.5) seat.hp = Math.min(seat.maxHp, seat.hp + 2);
+        else seat.hp = Math.max(1, seat.hp - 1);
+        break;
+      case 'shuffle': shuffleArr(this.chamber); this.revealed = null; this.emit('shuffle', {}); break;
+      case 'swap':
+        if (t && t.alive) { const tmp = seat.items; seat.items = t.items; t.items = tmp; }
+        break;
+      case 'seal': if (t && t.alive) { t.sealed = true; this.lastSealTarget = t.id; } break;
+      case 'echo': break;
+      case 'transfer': seat.transferTo = t && t.alive ? t.id : null; break;
+      case 'fuse': seat.extraShot = true; break;
+      case 'loot':
+        if (t && t.alive && t.items.length) {
+          const i = rnd(t.items.length);
+          const dropped = t.items.splice(i, 1)[0];
+          this.emit('looted', { from: t.id, item: dropped, itemName: ITEM_NAME[dropped] });
+        }
+        break;
+      default: break;
+    }
+  }
+
+  /* ---------------- 视图（客户端只能拿到这个） ---------------- */
+  view(forId) {
+    const me = this.byId(forId);
+    return {
+      seq: this.seq,
+      phase: this.phase, phaseLabel: this.phaseCfg.label, round: this.round,
+      turn: this.cur() ? this.cur().id : null,
+      over: this.over, winner: this.winner, extraAction: this.extraAction,
+      counts: { remaining: this.chamber.length, live: this.chamber.filter(x => x === 'live').length, blank: this.chamber.filter(x => x === 'blank').length },
+      // 只有拿了放大镜/手机的人能看到弹
+      peek: me && this.revealedFor === me.id ? this.revealed : null,
+      phonePeek: me && me.phonePeek != null ? me.phonePeek : null,
+      seats: this.seats.map(s => ({
+        id: s.id, name: s.name, idx: s.idx, alive: s.alive, hp: s.hp, maxHp: s.maxHp,
+        sealed: s.sealed, cuffed: !!s.skipNext, ai: s.ai, sawed: !!s.sawed,
+        transferArmed: !!s.transferTo,
+        items: s === me || (this.over) ? s.items.slice() : s.items.map(() => 'unknown'),
+        itemNames: s === me || (this.over) ? s.items.map(i => ITEM_NAME[i]) : s.items.map(() => '?'),
+      })),
+      me: me ? { id: me.id, items: me.items.slice(), sealed: me.sealed, transferTo: me.transferTo } : null,
+    };
+  }
+
+  /** 观战者视图：看不到任何人的背包内容 */
+  spectatorView() {
+    return {
+      seq: this.seq, phase: this.phase, round: this.round,
+      turn: this.cur() ? this.cur().id : null, over: this.over, winner: this.winner,
+      counts: { remaining: this.chamber.length },
+      seats: this.seats.map(s => ({
+        id: s.id, name: s.name, idx: s.idx, alive: s.alive, hp: s.hp, maxHp: s.maxHp, sealed: s.sealed, ai: s.ai,
+        items: s.items.map(() => 'unknown'),
+      })),
+    };
+  }
+}
+
+/* ---------------- AI 补位 ---------------- */
+function aiAct(engine, seatId) {
+  const a = engine.byId(seatId);
+  if (!a || !a.alive || engine.over) return null;
+  const others = engine.aliveSeats.filter(s => s !== a);
+  const lowest = others.slice().sort((x, y) => x.hp - y.hp)[0];
+
+  // 有道具先考虑用一件
+  if (!a.sealed && a.items.length) {
+    const known = engine.revealedFor === a.id ? engine.revealed : null;
+    const pick = (id) => a.items.includes(id);
+    if (known === 'live' && pick('saw')) return { kind: 'item', item: 'saw' };
+    if (known === 'blank' && pick('beer')) return { kind: 'item', item: 'beer' };
+    if (pick('glass')) return { kind: 'item', item: 'glass' };
+    if (known === 'live' && lowest && pick('cuff')) return { kind: 'item', item: 'cuff', target: lowest.id };
+    if (lowest && lowest.hp >= 2 && pick('seal')) return { kind: 'item', item: 'seal', target: lowest.id };
+    if (pick('pills') && a.hp === 1) return { kind: 'item', item: 'pills' };
+    if (a.hp === a.maxHp - 1 && pick('cig')) return { kind: 'item', item: 'cig' };
+  }
+  // 开枪目标：知道是空弹就打自己，否则打血最少的
+  const known = engine.revealedFor === a.id ? engine.revealed : null;
+  if (known === 'blank') return { kind: 'shoot', target: a.id };
+  const target = lowest || others[0];
+  return { kind: 'shoot', target: target ? target.id : a.id };
+}
+
+
+/* ================= 传输 ================= */
+const BROKER = 'wss://broker.emqx.io:8084/mqtt';
+window.SUBACK = window.SUBACK || [];
+window.RX = window.RX || [];
+const __op0 = MqttLite.prototype.onPacket;
+MqttLite.prototype.onPacket = function(b){ if (b[0] === 0x90) window.SUBACK.push(b[2] + ':' + b[4]); return __op0.call(this, b); };
+const NS = 'bs4p';
+const ICON = {
+  saw:'🪚', beer:'🥤', glass:'🔍', cig:'🚬', cuff:'🔗', phone:'📱', adr:'💉', inverter:'🔄', pills:'💊',
+  shuffle:'🎲', swap:'🤲', seal:'🚫', echo:'📢', transfer:'🧷', fuse:'🕰️', loot:'🗑️'
+};
+const NEED_TARGET = ['cuff','adr','swap','seal','loot','transfer'];
+const BAD = ['傻逼','煞笔','沙比','操你','草你','日你','妈的','你妈','尼玛','狗东西','废柴','去死',
+  '死全家','脑残','弱智','智障','贱人','婊子','垃圾人','fuck','shit','bitch','asshole','retard'];
+
+function mask(s){
+  let o = String(s||'');
+  for (const w of BAD) o = o.replace(new RegExp(w,'gi'), '*'.repeat(Math.min(w.length,4)));
+  return o.slice(0,120);
+}
+function nickOk(s){ const t=String(s||'').trim().slice(0,12); return t && !mask(t).includes('*') ? t : null; }
+
+const uid = () => Math.random().toString(36).slice(2,9);
+let ME = { key:'', name:'' };
+let ROOM = null, HOST = false;
+let mq = null, view = null, lobby = null;
+let engine = null, feed = [], chat = [], overText = null;
+let lastSync = 0, aiTimer = null, tickTimer = null;
+let mode = 'casual';
+
+const $ = id => document.getElementById(id);
+const show = id => { ['home','lobby','game'].forEach(x => $(x).classList.toggle('hidden', x !== id)); };
+
+/* ---------- 连 broker ---------- */
+const busT = () => `${NS}/${ROOM}/bus`;
+const vT = k => `${NS}/${ROOM}/v/${k}`;
+let reconnecting = false;
+
+function connectBroker(onOpen){
+  if (mq) { try { mq.close(); } catch {} mq = null; }
+  const client = new MqttLite(BROKER, {
+    clientId: 'bs' + uid(),
+    onOpen: () => {
+      setTimeout(() => { if (onOpen) onOpen(client); }, 60);
+      client.publish(busT(), JSON.stringify({ t: 'ping', key: ME.key, name: ME.name }));
+    },
+    onMessage: (topic, payload) => onMsg(topic, payload),
+    onClose: () => {
+      if (ROOM && !reconnecting) {
+        reconnecting = true;
+        toast('连接断了，正在重连…');
+        setTimeout(() => { reconnecting = false; reconnect(); }, 1200);
+      }
+    }
+  });
+  mq = client;
+  client.connect();
+  return client;
+}
+
+function subAll(topics, cl){
+  const c = cl || mq; let i = 0;
+  const step = () => {
+    if (i >= topics.length) return;
+    c.subscribe(topics[i++]);
+    setTimeout(step, 40);
+  };
+  step();
+}
+function subscribeClient(cl){ subAll([vT(ME.key)], cl); }
+function subscribeHost(cl){ subAll([busT(), vT(ME.key)], cl); }
+
+function reconnect(){
+  if (!ROOM) return;
+  connectBroker(cl => {
+    if (HOST) subscribeHost(cl); else subscribeClient(cl);
+    cl.publish(busT(), JSON.stringify({ t: 'join', key: ME.key, name: ME.name }));
+  });
+}
+
+/* ---------- 主页：建房 / 加入 ---------- */
+$('btnCreate').onclick = () => {
+  const n = nickOk($('name').value);
+  if (!n) return alert('名字不能为空，也不能带屏蔽词');
+  ME = { key: uid(), name: n };
+  ROOM = String(100000 + Math.floor(Math.random() * 900000));
+  HOST = true;
+  lobby = {
+    seats: [{ key: ME.key, name: n, ai: false, online: true, lastPing: Date.now() }],
+    spec: [], mode, creative: defaultCreative(mode), started: false, hostKey: ME.key
+  };
+  engine = null; view = null; feed = []; chat = [];
+  show('lobby'); renderLobby();
+  connectBroker(cl => { subscribeHost(cl); pushAll(); });
+  startTick();
+};
+
+$('btnJoin').onclick = () => {
+  const n = nickOk($('name').value);
+  if (!n) return alert('名字不能为空，也不能带屏蔽词');
+  const c = $('code').value.trim();
+  if (!/^\d{6}$/.test(c)) return alert('房号是 6 位数字');
+  ME = { key: uid(), name: n };
+  ROOM = c; HOST = false;
+  engine = null; view = null; lobby = null; feed = []; chat = [];
+  show('lobby');
+  connectBroker(cl => {
+    subscribeClient(cl);
+    cl.publish(busT(), JSON.stringify({ t: 'join', key: ME.key, name: ME.name }));
+  });
+  startTick();
+};
+
+function defaultCreative(m){
+  const all = ['shuffle','swap','seal','echo','transfer','fuse','loot'];
+  const off = ['shuffle','echo','swap','loot','transfer'];
+  return Object.fromEntries(all.map(k => [k, m === 'ranked' ? !off.includes(k) : true]));
+}
+function toast(t){
+  const e = $('gTip'); if (!e) return;
+  e.textContent = t;
+  setTimeout(() => { if (e.textContent === t) e.textContent = ''; }, 2600);
+}
+
+/* ---------- 消息 ---------- */
+function onMsg(topic, payload){
+  (window.RX = window.RX || []).push(topic);
+  const tail = topic.slice(NS.length + 1 + ROOM.length + 1);
+  let m; try { m = JSON.parse(payload); } catch { return; }
+  if (tail === 'bus') { if (HOST) hostBus(m); return; }
+  if (tail.startsWith('v/')) applyView(m);
+}
+
+function hostBus(m){
+  if (m.t === 'ping') {
+    const p = lobby.seats.find(s => s.key === m.key);
+    if (p) { p.lastPing = Date.now(); if (!p.online) { p.online = true; pushAll(); } }
+    return;
+  }
+  if (m.t === 'join') {
+    const n = nickOk(m.name); if (!n) return;
+    const exist = lobby.seats.find(s => s.key === m.key) || lobby.spec.find(s => s.key === m.key);
+    if (exist) { exist.online = true; exist.lastPing = Date.now(); if (exist.name !== n) exist.name = n; }
+    else if (!lobby.started && lobby.seats.length < 4) lobby.seats.push({ key: m.key, name: n, ai: false, online: true, lastPing: Date.now() });
+    else if (lobby.spec.length < 8) lobby.spec.push({ key: m.key, name: n, online: true, lastPing: Date.now() });
+    pushAll();
+    return;
+  }
+  if (m.t === 'act') { if (engine && !engine.over) hostAct(m); return; }
+  if (m.t === 'chat') {
+    const clean = mask(m.text); if (!clean.trim()) return;
+    const who = lobby.seats.find(s => s.key === m.key) || lobby.spec.find(s => s.key === m.key);
+    chat.push({ from: who ? who.name : '?', text: clean });
+    while (chat.length > 60) chat.shift();
+    pushAll();
+    return;
+  }
+}
+
+function applyView(m){
+  lobby = m.lobby || lobby;
+  chat = m.chat || chat;
+  feed = m.feed || feed;
+  if (m.view) { view = m.view; if (!m.view.over) show('game'); renderGame(); renderChats(); }
+  else { view = null; if (!HOST) show('lobby'); renderLobby(); renderChats(); renderLogs(); }
+}
+
+function hostAct(m){
+  const before = engine.events.length;
+  try {
+    if (m.kind === 'item') engine.useItem(m.key, m.item, m.target);
+    else engine.shoot(m.key, m.target || m.key);
+  } catch (e) {
+    mq.publish(busT(), JSON.stringify({ t: 'sys', key: m.key, text: e.message }));
+    toast(e.message);
+    return;
+  }
+  collectEvents(before);
+  pushAll();
+}
+
+function collectEvents(from){
+  for (const ev of engine.events.slice(from)) {
+    if (ev.type === 'item') {
+      const who = lobby.seats.find(s => s.key === ev.by);
+      feed.push(`${who ? who.name : '?'} 使用 ${ev.itemName}`);
+    }
+    if (ev.type === 'shot') {
+      const who = lobby.seats.find(s => s.key === ev.by);
+      const tgt = lobby.seats.find(s => s.key === ev.target);
+      feed.push(`${who ? who.name : '?'} 朝 ${tgt ? tgt.name : '?'} 开枪`);
+    }
+    if (ev.type === 'reload') feed.push(`装填 ${ev.total} 发（${ev.live} 实 ${ev.blank} 空）`);
+    if (ev.type === 'phase') feed.push(`进入 ${ev.label}`);
+    if (ev.type === 'end') {
+      const w = lobby.seats.find(s => s.key === ev.winner);
+      feed.push(`对局结束，胜者 ${w ? w.name : '无'}`);
+    }
+    if (ev.type === 'extra') feed.push('延时引信：额外一次开枪机会');
+    if (ev.type === 'steal' || ev.type === 'looted') feed.push(`${ev.itemName} 易主`);
+  }
+  while (feed.length > 60) feed.shift();
+}
+
+function pushAll(){
+  if (!HOST || !ROOM) return;
+  const keys = [...lobby.seats.map(s => s.key), ...lobby.spec.map(s => s.key)];
+  const lobbyOut = {
+    code: ROOM, mode: lobby.mode, creative: lobby.creative, seats: lobby.seats,
+    spec: lobby.spec, started: lobby.started, hostKey: ME.key
+  };
+  const payloadBase = { lobby: lobbyOut, chat: chat.slice(-30), feed: feed.slice(-20) };
+  for (const k of keys) {
+    let g = null;
+    if (engine) g = lobby.seats.some(s => s.key === k) ? engine.view(k) : engine.spectatorView();
+    mq.publish(vT(k), JSON.stringify({ ...payloadBase, view: g }), true);
+  }
+  if (!keys.includes(ME.key)) mq.publish(vT(ME.key), JSON.stringify({ ...payloadBase, view: null }), true);
+}
+
+/* ---------- 房主：开局 & AI ---------- */
+function startGame(){
+  if (!HOST) return;
+  const seats = lobby.seats.map((s, i) => ({ id: s.key, name: s.name, ai: s.ai }));
+  let aiN = 1;
+  while (seats.length < 4) {
+    const name = 'AI·' + aiN++;
+    const id = 'ai' + seats.length;
+    seats.push({ id, name, ai: true });
+    lobby.seats.push({ key: id, name, ai: true, online: true });
+  }
+  engine = new Engine(seats, { creative: lobby.creative });
+  lobby.started = true;
+  feed = []; collectEvents(0);
+  pushAll();
+}
+function aiTick(){
+  if (!HOST || !engine || engine.over) return;
+  const cur = engine.cur();
+  if (!cur) return;
+  const seat = lobby.seats.find(s => s.key === cur.id);
+  const need = !seat || seat.ai || !seat.online;
+  if (!need) return;
+  if (Date.now() - lastSync < 700) return;
+  lastSync = Date.now();
+  const before = engine.events.length;
+  try {
+    const act = aiAct(engine, cur.id);
+    if (act && act.kind === 'item') engine.useItem(cur.id, act.item, act.target);
+    else if (act) engine.shoot(cur.id, act.target);
+  } catch { try { engine.shoot(cur.id, cur.id); } catch {} }
+  collectEvents(before); pushAll();
+}
+function startTick(){
+  clearInterval(tickTimer);
+  tickTimer = setInterval(() => {
+    if (HOST) { aiTick(); sweepOffline(); }
+  }, 100);
+  clearInterval(pingTimer);
+  pingTimer = setInterval(() => {
+    if (mq && mq.alive && ROOM) mq.publish(busT(), JSON.stringify({ t:'ping', key: ME.key, name: ME.name }));
+  }, 5000);
+}
+let pingTimer = null;
+function sweepOffline(){
+  const now = Date.now();
+  let changed = false;
+  for (const s of lobby.seats) {
+    if (s.ai) continue;
+    const alive = (now - (s.lastPing || 0)) < 16000;
+    if (alive !== s.online) { s.online = alive; changed = true; }
+    if (!alive && !s.offlineAt) s.offlineAt = now;
+    if (alive) s.offlineAt = 0;
+  }
+  if (changed) pushAll();
+  if (!engine || engine.over) return;
+  for (const s of lobby.seats) {
+    if (s.ai || !s.offlineAt) continue;
+    if (Date.now() - s.offlineAt > 180000) {
+      const es = engine.byId(s.key);
+      if (es && es.alive) {
+        es.hp = 0; es.alive = false; es.items = [];
+        feed.push(`${s.name} 掉线超时，判出局`);
+        engine.settle(); pushAll();
+      }
+    }
+  }
+}
+
+/* ================= 渲染 ================= */
+function renderLobby(){
+  if (!lobby) return;
+  $('lbCode').textContent = ROOM;
+  const grid = $('lbSeats');
+  grid.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const s = lobby.seats[i];
+    if (s) {
+      grid.insertAdjacentHTML('beforeend',
+        `<div class="seatrow"><span class="f">${s.ai ? '🤖' : '🙂'}</span>
+         <span>${esc(s.name)}${s.key===ME.key?' (你)':''}</span>
+         <span style="margin-left:auto;color:${s.ai?'#8b8577':(s.online===false?'#d4473f':'#9be0b4')}">${s.ai?'AI':(s.online===false?'离线':'在线')}</span></div>`);
+    } else {
+      grid.insertAdjacentHTML('beforeend', `<div class="seatrow empty"><span class="f">➕</span><span>空位</span><span style="margin-left:auto">AI 补位</span></div>`);
+    }
+  }
+  const spec = lobby.spec || [];
+  $('lbSpec').textContent = spec.length ? `观战席 ${spec.length} 人：${spec.map(s => s.name).join('、')}` : '观战席：空';
+
+  const isHost = HOST;
+  $('lbHost').classList.toggle('hidden', !isHost || lobby.started);
+  $('btnStart').classList.toggle('hidden', !isHost || lobby.started);
+  $('lbMode').textContent = lobby.mode === 'ranked' ? '排位' : '休闲';
+  if (isHost && !lobby.started) {
+    const box = $('lbToggles');
+    box.innerHTML = '';
+    for (const k of ['shuffle','swap','seal','echo','transfer','fuse','loot']) {
+      box.insertAdjacentHTML('beforeend',
+        `<label><input type="checkbox" data-k="${k}" ${lobby.creative[k]?'checked':''}>${ICON[k]} ${CREATIVE_NAME[k]}</label>`);
+    }
+    box.querySelectorAll('input').forEach(inp => {
+      inp.onchange = () => { lobby.creative[inp.dataset.k] = inp.checked; pushAll(); };
+    });
+  }
+  $('lbWait').classList.toggle('hidden', isHost);
+  $('lbWait').textContent = lobby.started ? '' : '等房主开局…';
+}
+
+function renderChats(){
+  const html = chat.map(c => `<div><span class="who">${esc(c.from)}</span>：${esc(c.text)}</div>`).join('');
+  if ($('lbChat') && !$('lobby').classList.contains('hidden')) $('lbChat').innerHTML = html || '<div class="sys">还没有人说话</div>';
+  if ($('gChat')) $('gChat').innerHTML = html || '<div class="sys">还没有人说话</div>';
+}
+function renderLogs(){
+  const feedHtml = '<div class="feed">' + feed.map(f => `<div>${esc(f)}</div>`).join('') + '</div>';
+  const chatHtml = chat.map(c => `<div><span class="who">${esc(c.from)}</span>：${esc(c.text)}</div>`).join('');
+  if ($('gChat')) $('gChat').innerHTML = feedHtml + (chatHtml || '<div class="sys">还没有人说话</div>');
+  if ($('lbChat') && !lobby?.started) $('lbChat').innerHTML = feedHtml + chatHtml;
+}
+
+const POS = ['s-bot','s-left','s-top','s-right'];
+function renderGame(){
+  if (!view || !view.seats) return;
+  show('game');
+  const meIdx0 = view.seats.findIndex(s => s.id === ME.key);
+  const meIdx = meIdx0 < 0 ? 0 : meIdx0;   // 观战者不在座位里，从 0 号位排
+  $('gRoom').textContent = '房 ' + ROOM;
+  $('gPhase').textContent = (view.phaseLabel || '') ;
+  $('gRound').textContent = '第 ' + (view.round || 1) + ' 轮';
+  $('gCount').textContent = view.counts ? `剩 ${view.counts.remaining} 发` : '—';
+
+  // 座位
+  const table = $('table');
+  table.querySelectorAll('.seatp').forEach(e => e.remove());
+  const n = view.seats.length;
+  const order = [];
+  for (let i = 0; i < n; i++) order.push(view.seats[(meIdx + i) % n]);
+  const posMap = n >= 4 ? POS : n === 3 ? ['s-bot','s-left','s-top'] : ['s-bot','s-top'];
+  order.forEach((s, i) => {
+    const isMe = s.id === ME.key;
+    const hp = '🟥'.repeat(Math.max(0, s.hp));
+    const slots = Array.from({length:8}, (_, k) => {
+      const it = s.items && s.items[k];
+      return it && it !== 'unknown'
+        ? `<i style="background:#ffe9b8;border-color:#e9b949"></i>`
+        : `<i></i>`;
+    }).join('');
+    const badges = [
+      s.sealed ? '🚫' : '', s.cuffed ? '🔗' : '', s.sawed ? '🪚' : '', s.transferArmed ? '🧷' : ''
+    ].filter(Boolean).join('');
+    const face = isMe ? (s.alive ? '🙂' : '💀') : (s.alive ? (s.ai ? '🤖' : ['😈','😡','😬','😑'][s.idx % 4]) : '💀');
+    table.insertAdjacentHTML('beforeend',
+      `<div class="seatp ${posMap[i]||'s-top'} ${view.turn===s.id?'turn':''} ${s.alive?'':'dead'}" data-key="${s.id}">
+         <div class="hh">${s.alive?'🤚':'🫱'}</div>
+         <div class="badges">${badges}</div>
+         <div class="face">${face}</div>
+         <div class="nm">${esc(s.name)}${isMe?' (你)':''}</div>
+         <div class="hpb">${s.alive ? hp : '💀'}</div>
+         <div class="slots">${slots}</div>
+       </div>`);
+  });
+
+  // 底部动作
+  const bar = $('gBar'); bar.innerHTML = '';
+  const mine = view.seats.find(s => s.id === ME.key);
+  const myTurn = view.turn === ME.key && !view.over;
+  const others = view.seats.filter(s => s.id !== ME.key && s.alive);
+  if (view.over) {
+    const w = view.seats.find(s => s.id === view.winner);
+    $('gOver').classList.remove('hidden');
+    $('gOver').innerHTML = `<div class="big">${w ? '🏆 ' + esc(w.name) : '全员阵亡'}</div>
+      <div class="txt">${w && w.id === ME.key ? '你活到了最后' : (mine ? '下一局再来' : '看完了，散场吧')}</div>
+      ${HOST
+        ? '<button class="primary" onclick="rematch()">再来一局</button><button onclick="location.reload()">回主页</button>'
+        : '<button class="primary" onclick="backLobby()">回大厅等房主</button><button onclick="location.reload()">回主页</button>'}`;
+  } else {
+    $('gOver').classList.add('hidden');
+    if (myTurn && !view.me?.sealed) {
+      bar.insertAdjacentHTML('beforeend', `<button class="self" data-shoot="${ME.key}">🔫 射自己</button>`);
+      others.forEach(s => bar.insertAdjacentHTML('beforeend', `<button class="foe" data-shoot="${s.id}">🔫 射 ${esc(s.name)}</button>`));
+    } else if (myTurn) {
+      bar.insertAdjacentHTML('beforeend', `<button class="self" data-shoot="${ME.key}">🔫 射自己（被封缄：不能用道具）</button>`);
+      others.forEach(s => bar.insertAdjacentHTML('beforeend', `<button class="foe" data-shoot="${s.id}">🔫 射 ${esc(s.name)}</button>`));
+    } else if (!mine) {
+      bar.insertAdjacentHTML('beforeend', `<div class="hint" style="padding:8px">👀 观战中 · 只能看，别急</div>`);
+    } else {
+      const t = view.seats.find(s => s.id === view.turn);
+      bar.insertAdjacentHTML('beforeend', `<div class="hint" style="padding:8px">${t ? esc(t.name) + ' 的回合…' : '结算中…'}</div>`);
+    }
+  }
+  bar.querySelectorAll('[data-shoot]').forEach(b => b.onclick = () => doAct({ kind:'shoot', target:b.dataset.shoot }));
+
+  // 手牌
+  const hand = $('gHand'); hand.innerHTML = '';
+  if (mine && mine.items) {
+    mine.items.forEach((it, i) => {
+      if (it === 'unknown') return;
+      const can = myTurn && !view.me?.sealed && !view.extraAction;
+      hand.insertAdjacentHTML('beforeend',
+        `<div class="it ${can?'':'dim'}" data-item="${it}" data-i="${i}"><span>${ICON[it]||'❔'}</span>${ITEM_NAME[it]||it}</div>`);
+    });
+    if (!mine.items.length) hand.innerHTML = '<div class="tips">背包空的，先开枪吧</div>';
+  }
+  hand.querySelectorAll('.it').forEach(el => { if (el.classList.contains('dim')) return; el.onclick = () => pickItem(el.dataset.item); });
+  $('gTip').textContent = view.me?.sealed ? '你被封缄了：本回合只能开枪' : (view.extraAction ? '额外行动只能开枪' : '');
+}
+
+function pickItem(item){
+  if (!NEED_TARGET.includes(item)) return doAct({ kind:'item', item });
+  const others = view.seats.filter(s => s.id !== ME.key && s.alive);
+  const mask = document.createElement('div');
+  mask.className = 'pickmask';
+  mask.innerHTML = `<div class="t">${ICON[item]} ${ITEM_NAME[item]} —— 选目标</div>`;
+  others.forEach(s => {
+    const b = document.createElement('button');
+    b.textContent = `${s.ai?'🤖':'🙂'} ${s.name}`;
+    b.onclick = () => { mask.remove(); doAct({ kind:'item', item, target:s.id }); };
+    mask.appendChild(b);
+  });
+  const c = document.createElement('button');
+  c.textContent = '取消'; c.className = 'bad';
+  c.onclick = () => mask.remove();
+  mask.appendChild(c);
+  document.body.appendChild(mask);
+}
+
+function doAct(payload){
+  if (!mq) return;
+  mq.publish(busT(), JSON.stringify({ ...payload, t: 'act', key: ME.key }));
+}
+
+/* ---------- 聊天 ---------- */
+function wireChat(inputId, btnId){
+  const send = () => {
+    const el = $(inputId); const t = el.value.trim();
+    if (!t) return;
+    mq.publish(busT(), JSON.stringify({ t: 'chat', key: ME.key, name: ME.name, text: t }));
+    el.value = '';
+  };
+  $(btnId).onclick = send;
+  $(inputId).addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+}
+wireChat('lbChatIn','lbChatSend');
+wireChat('gChatIn','gChatSend');
+$('btnLog').onclick = () => { $('gLog').classList.remove('hidden'); renderLogs(); };
+$('btnLogClose').onclick = () => $('gLog').classList.add('hidden');
+$('btnCopy').onclick = () => {
+  navigator.clipboard?.writeText(ROOM);
+  $('btnCopy').textContent = '已复制';
+  setTimeout(() => $('btnCopy').textContent = '复制', 1200);
+};
+$('btnStart').onclick = startGame;
+
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.modes button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); mode = b.dataset.mode;
+});
+
+function esc(s){ return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* 缺省：如果本地存了 key 就用（重连识别） */
+const saved = localStorage.getItem('bs4p_key');
+if (saved) ME.key = saved;
+
+/* ---- 演示模式（截图/调试用）---- */
+function rematch(){
+  if (!HOST) return;
+  $('gOver').classList.add('hidden');
+  engine = new Engine(lobby.seats.map(s => ({ id: s.key, name: s.name, ai: s.ai })), { creative: lobby.creative });
+  feed = []; collectEvents(0); pushAll();
+}
+function backLobby(){
+  $('gOver').classList.add('hidden');
+  show('lobby');
+}
+
+if (location.search.includes('demo')) {
+  ME = { key:'me', name:'阿强' }; ROOM='888888'; HOST=true;
+  lobby = { seats:[
+      {key:'me',name:'阿强',ai:false,online:true},
+      {key:'b',name:'小美',ai:false,online:true},
+      {key:'c',name:'老张',ai:false,online:true},
+      {key:'ai3',name:'AI·1',ai:true,online:true}],
+    spec:[{key:'s',name:'看客',online:true}], mode:'casual', creative:defaultCreative('casual'), started:true };
+  engine = new Engine(lobby.seats.map(s=>({id:s.key,name:s.name,ai:s.ai})), { creative: lobby.creative });
+  engine.grantAll();
+  feed=['装填 8 发（3 实 5 空）','阿强 使用 放大镜'];
+  chat=[{from:'小美',text:'这枪稳不稳？'}];
+  view = { ...engine.view('me'), room: ROOM };
+  show('game'); renderGame(); renderLogs();
+}
+
+</script>
+</body>
+</html>
