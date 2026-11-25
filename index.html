@@ -1,0 +1,1754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🔫 Emoji轮盘赌</title>
+<style>
+  :root{
+    --live:#e2483d; --blank:#5aa9e6; --ok:#3fae6a;
+    --wood:#6b4423; --wood2:#8a5a2f;
+  }
+  *{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+  body{
+    font-family:"PingFang SC","Noto Sans SC",system-ui,sans-serif;
+    background:#0e0a14; color:#eee; min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; overflow-x:hidden;
+  }
+
+  /* ================= 生死状 ================= */
+  #contract{position:fixed; inset:0; z-index:31; display:none; flex-direction:column; align-items:center; justify-content:center;
+    background:radial-gradient(120% 90% at 50% 20%,#2a1d33,#100b16 75%); padding:18px; transition:opacity .5s; gap:14px;}
+  #contract.show{display:flex;}
+  #contract.gone{opacity:0; pointer-events:none;}
+  .cHint{max-width:330px; color:#b9a6c8; font-size:12px; line-height:1.7; text-align:center;}
+  .cHint b{color:#ffd35c;}
+  .paper{width:100%; max-width:340px; background:linear-gradient(170deg,#e6dcc0,#cdc19f 70%,#b9ab86);
+    color:#2b2318; border-radius:4px; padding:16px 15px 14px; transform:rotate(-1.2deg);
+    box-shadow:0 16px 30px rgba(0,0,0,.55); font-family:"Courier New",monospace; position:relative; overflow:hidden;}
+  .paper::before{content:''; position:absolute; right:-30px; top:-30px; width:120px; height:120px;
+    background:radial-gradient(circle,rgba(120,20,20,.5),transparent 65%);}
+  .paper::after{content:''; position:absolute; left:-20px; bottom:-40px; width:140px; height:110px;
+    background:radial-gradient(circle,rgba(120,20,20,.35),transparent 70%);}
+  .ptitle{font-size:22px; font-weight:800; letter-spacing:6px; text-align:center;}
+  .peng{font-size:9px; letter-spacing:1.5px; text-align:center; color:#6a5c43; margin:2px 0 10px;}
+  .pbody{font-size:11.5px; line-height:1.75; color:#3a3021; border-top:1px dashed rgba(60,45,25,.35);
+    border-bottom:1px dashed rgba(60,45,25,.35); padding:8px 0; margin-bottom:10px;}
+  .pname{font-size:10px; letter-spacing:1.2px; color:#5c4d34;}
+  #nameInput{width:100%; margin-top:4px; background:transparent; border:none; border-bottom:2px solid #4a3c26;
+    font-family:inherit; font-size:19px; letter-spacing:3px; color:#2b2318; padding:4px 2px; outline:none;}
+  #nameInput::placeholder{color:#8d7d5e; font-size:12px; letter-spacing:1px;}
+  #btnSign{width:100%; margin-top:12px; background:#7a1e1e; color:#f6e9d2; border:none; border-radius:6px;
+    font-size:14px; font-weight:700; padding:11px; letter-spacing:2px; cursor:pointer; font-family:inherit;}
+  #btnSign:active{transform:scale(.97);}
+  .stamp{position:absolute; right:18px; bottom:58px; width:74px; height:74px; border:3px solid #a31b1b;
+    border-radius:50%; color:#a31b1b; font-size:10px; font-weight:800; letter-spacing:1px;
+    display:flex; align-items:center; justify-content:center; text-align:center; transform:rotate(-16deg) scale(.4);
+    opacity:0; transition:.3s;}
+  .stamp.on{opacity:.9; transform:rotate(-16deg) scale(1);}
+
+  /* ================= 走廊开场 ================= */
+  #intro.off{display:none;}
+  #intro{position:fixed; inset:0; z-index:30;
+    background:linear-gradient(180deg,#241a2e,#0e0a14 75%); transition:opacity .55s; overflow:hidden;}
+  #intro.hide{opacity:0; pointer-events:none;}
+  #intro::before{content:''; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(90deg, rgba(255,255,255,.022) 0 2px, transparent 2px 56px),
+      radial-gradient(58% 42% at 50% 4%, rgba(255,186,120,.13), transparent 72%);}
+  .hallLamp{position:absolute; top:26px; left:50%; transform:translateX(-50%); font-size:24px;
+    filter:drop-shadow(0 0 16px rgba(255,190,110,.9)); animation:hSway 5s ease-in-out infinite;}
+  .hall-floor{position:absolute; left:0; right:0; bottom:0; height:96px;
+    background:repeating-linear-gradient(90deg,#2c2033 0 40px,#241a2b 40px 80px); border-top:2px solid #3a2b42;}
+  .hall-door{position:absolute; right:14%; bottom:96px; font-size:86px;
+    filter:drop-shadow(0 10px 18px rgba(0,0,0,.6));}
+  .door-glow{position:absolute; right:14%; bottom:96px; width:150px; height:150px; border-radius:50%;
+    background:radial-gradient(circle,rgba(255,190,120,.5),transparent 70%); opacity:0;}
+  #intro.kicked .door-glow{opacity:1; animation:glowBoom .8s forwards;}
+  #intro.kicked .hall-door{animation:kickShake .12s 4, kickOpen .7s forwards;}
+  @keyframes glowBoom{0%{opacity:0; transform:scale(.5)}40%{opacity:1; transform:scale(1.3)}100%{opacity:.75; transform:scale(1.6)}}
+  @keyframes kickShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px) rotate(-4deg)}75%{transform:translateX(8px) rotate(4deg)}}
+  @keyframes kickOpen{to{transform:translateX(18px) rotate(10deg); filter:brightness(1.6)}}
+  .walker{position:absolute; bottom:100px; left:9%; font-size:64px; transition:left 1s ease; z-index:2;}
+  .walker.at-door{left:50%;}
+  .hall-ui{position:absolute; left:0; right:0; bottom:22px; display:flex; flex-direction:column; align-items:center; gap:12px; z-index:3;}
+  .hall-hint{color:#e8d8e0; font-size:14px;}
+  #btnHall{background:linear-gradient(135deg,#e2483d,#b82e5a); color:#fff; border:none;
+    font-size:16px; font-weight:700; padding:13px 28px; border-radius:18px; cursor:pointer;}
+  #btnHall:active{transform:scale(.96);}
+
+  /* ================= 赌厅 ================= */
+  #arena{width:100%; max-width:470px; display:none; flex-direction:column; gap:10px;
+    padding:10px 10px 26px; opacity:0; transition:opacity .5s;}
+  #arena.enter{opacity:1;}
+
+  #room{position:relative; border-radius:22px; overflow:hidden; padding:8px 6px 6px;
+    background:radial-gradient(120% 80% at 50% 0%,#4a2f45 0%,#2b1c30 45%,#150e1c 100%);
+    box-shadow:0 12px 30px rgba(0,0,0,.55);}
+  .lamp{position:absolute; top:0; left:50%; transform:translateX(-50%); z-index:1; text-align:center;}
+  .lamp .cord{width:2px; height:16px; background:#5a4646; margin:0 auto;}
+  .lamp .bulb{font-size:22px;}
+  .lamp .beam{width:210px; height:120px; margin-top:-6px;
+    background:linear-gradient(180deg,rgba(255,214,140,.22),transparent 85%);
+    clip-path:polygon(40% 0,60% 0,100% 100%,0 100%);}
+  .neon{position:absolute; font-size:16px; opacity:.55; z-index:1;}
+  .neon.a{left:8px; top:26px;} .neon.b{right:8px; top:26px;}
+
+  /* ---- 赌桌 ---- */
+  #tableWrap{position:relative; padding:30px 4px 30px; z-index:2;}
+  #felt{position:relative; height:clamp(220px, 42vh, 372px); border-radius:14px; border:7px solid var(--wood);
+    box-shadow:inset 0 0 40px rgba(0,0,0,.55), 0 8px 22px rgba(0,0,0,.5);
+    background:
+      repeating-linear-gradient(0deg, transparent 0 62px, rgba(255,255,255,.10) 62px 63px),
+      repeating-linear-gradient(90deg, transparent 0 74px, rgba(255,255,255,.10) 74px 75px),
+      radial-gradient(120% 100% at 50% 50%, #357f59 0%, #245c40 60%, #17392a 100%);
+    overflow:hidden;
+  }
+  #felt .inner-rect{position:absolute; left:50%; top:47%; width:128px; height:96px;
+    margin:-48px 0 0 -64px; border:1px solid rgba(255,255,255,.14); border-radius:8px;}
+
+  /* 桌面的分区白线：左/中/右与上下半场，把空桌面变成牌桌结构 */
+  .zone{position:absolute; background:rgba(255,255,255,.16); pointer-events:none; z-index:3;}
+  .zone.v{top:9px; bottom:9px; width:1px;}
+  .zone.h{left:9px; right:9px; height:1px;}
+  .zone.v.a{left:27%;}
+  .zone.v.b{left:73%;}
+  .zone.h.c{top:52%;}
+
+  /* ---- 两人贴桌 ---- */
+  .face{position:absolute; left:50%; transform:translateX(-50%); font-size:70px; z-index:7;
+    transition:transform .2s; filter:drop-shadow(0 4px 8px rgba(0,0,0,.6));}
+  #dealerFace{top:-38px;}
+  #playerFace{bottom:-38px;}
+  .face::after{content:''; position:absolute; left:50%; bottom:-6px; width:52px; height:12px;
+    margin-left:-37px; border-radius:50%; background:rgba(0,0,0,.38); filter:blur(3px); z-index:-1;}
+  .face.recoil{animation:faceRecoil .3s;}
+  .face.hurt{animation:faceHurt .38s;}
+  .face.fallen{animation:faceFall .7s forwards;}
+  @keyframes faceRecoil{0%{transform:translateX(-50%) translateY(0)}35%{transform:translateX(-50%) translateY(8px) rotate(6deg)}100%{transform:translateX(-50%) translateY(0)}}
+  @keyframes faceHurt{0%,100%{transform:translateX(-50%)}20%{transform:translateX(-50%) translateX(-7px)}40%{transform:translateX(-50%) translateX(7px)}60%{transform:translateX(-50%) translateX(-5px)}80%{transform:translateX(-50%) translateX(5px)}}
+  @keyframes faceFall{to{transform:translateX(-50%) rotate(78deg) translate(6px,10px); opacity:.6;}}
+
+  /* ---- 手 ---- */
+  .idleHand{position:absolute; font-size:48px; z-index:6; opacity:.95;
+    transition:left .34s ease, top .34s ease, transform .34s ease, opacity .16s;}
+  #dealerHandL{left:13%; top:14px; transform:translate(-50%,0) rotate(189deg);}
+  #dealerHandR{left:87%; top:14px; transform:translate(-50%,0) rotate(171deg);}
+  #playerHandL{left:13%; top:auto; bottom:14px; transform:translate(-50%,0) rotate(-10deg);}
+  #playerHandR{left:87%; top:auto; bottom:14px; transform:translate(-50%,0) rotate(10deg);}
+  .idleHand.cuffed{filter:drop-shadow(0 0 6px #9ec7ff);}
+  .idleHand.cuffed{animation:cuffShake .3s;}
+  @keyframes cuffShake{0%,100%{transform:none}50%{transform:translateX(-3px)}}
+
+  /* ---- 枪 + 握枪手（同一个 rig，手永远粘在枪上） ---- */
+  #rig{position:absolute; left:50%; top:47%; width:76px; height:76px; margin:-38px 0 0 -38px;
+    z-index:8; transition:transform .34s cubic-bezier(.3,.9,.35,1.15);}
+  #gun{position:absolute; left:2px; top:14px; font-size:64px; line-height:64px;
+    filter:drop-shadow(0 5px 8px rgba(0,0,0,.55));}
+  #rigHand{position:absolute; left:44px; top:38px; font-size:26px; opacity:0;
+    transform:scale(.6) rotate(-10deg); transition:opacity .15s, transform .15s;}
+  #rigHand.on{opacity:1; transform:scale(1) rotate(-10deg);}
+  #rigHand2{position:absolute; left:60px; top:34px; font-size:24px; opacity:0;
+    transform:scale(.6) rotate(10deg) scaleX(-1); transition:opacity .15s, transform .15s;}
+  #rigHand2.on{opacity:1; transform:scale(1) rotate(10deg) scaleX(-1);}
+  #flash{position:absolute; left:-48px; top:14px; font-size:38px; opacity:0;}
+  #flash.on{animation:flashPop .34s ease-out;}
+  @keyframes flashPop{0%{opacity:0; transform:scale(.3)}35%{opacity:1; transform:scale(1.5)}100%{opacity:0; transform:scale(1)}}
+
+  /* ---- 瞄准线：指向自己 / 指向对面 ---- */
+  #aim{position:absolute; left:50%; width:3px; display:none; z-index:7; border-radius:2px;
+    transform:translateX(-50%);
+    background:linear-gradient(180deg,rgba(255,90,70,0),rgba(255,90,70,.85));}
+  #aim.up{display:block; top:10px; height:calc(47% - 16px);
+    background:linear-gradient(0deg,rgba(255,90,70,0),rgba(255,90,70,.85));}
+  #aim.down{display:block; bottom:10px; height:calc(47% - 16px);}
+
+  /* ---- 对白条 ---- */
+  #speechBar{display:flex; gap:8px; align-items:flex-start;
+    background:rgba(18,12,26,.92); border:1px solid #35244a; border-left-width:3px;
+    border-radius:12px 12px 12px 5px; padding:8px 11px; min-height:46px;}
+  #speechBar.dealer{border-left-color:#ff5a5a;}
+  #speechBar.player{border-left-color:#5ce39a;}
+  #whoWrap{display:flex; flex-direction:column; align-items:center; gap:1px; width:34px; flex:none;}
+  #speechWho{font-size:19px; line-height:1.2;}
+  #speechName{font-size:8.5px; letter-spacing:.8px; color:#9a86b0; font-family:monospace;}
+  #speechTx{font-size:12.5px; line-height:1.55; color:#f2e8fb; letter-spacing:.2px; padding-top:2px;}
+  #speechBar.blank #speechTx{color:#6b5b7c;}
+
+  /* ---- 电子屏 ---- */
+  .scoreboard{position:absolute; left:8px; top:34%; z-index:5;
+    background:#0d0f0d; border:2px solid #3a3a33; border-radius:8px; padding:5px 8px;
+    font-size:11px; line-height:1.75; color:#7dffb0; font-family:monospace; letter-spacing:1px;}
+  .scoreboard .r{display:flex; gap:6px; justify-content:space-between; min-width:92px;}
+  .scoreboard .lbl{color:#7fbf9c;}
+
+  /* ---- 子弹盘（右侧竖排） ---- */
+  #shells{position:absolute; left:50%; top:58%; transform:translateX(-50%); z-index:5;
+    display:flex; flex-direction:row; gap:6px; align-items:center;}
+  .sh{width:22px; height:12px; border-radius:4px;
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.35), 0 2px 3px rgba(0,0,0,.45);}
+  .sh.live{background:linear-gradient(90deg,#ff6b5e,#b52f26);}
+  .sh.blank{background:linear-gradient(90deg,#9cd0f5,#3d7ea8);}
+  .sh.drop{animation:shDrop .26s backwards;}
+  @keyframes shDrop{0%{opacity:0;transform:translateY(-14px) scaleX(.4)}60%{opacity:1;transform:translateY(2px) scaleX(1.08)}100%{transform:translateY(0)}}
+
+  /* ---- 道具格 ---- */
+  .slotsWrap{position:absolute; z-index:5; display:flex; gap:5px;}
+  #playerSlots{position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
+    display:flex; flex-wrap:wrap; justify-content:center; align-content:flex-start;
+    gap:5px; width:176px; z-index:5;}
+  #dealerSlots{position:absolute; left:50%; top:26px; transform:translateX(-50%);
+    display:flex; flex-wrap:wrap; justify-content:center; align-content:flex-start;
+    gap:5px; width:176px; z-index:5; opacity:.95;}
+  .slot.more{width:auto; padding:0 7px; height:26px; font-size:12px; color:#ffd35c;
+    border:1px solid rgba(255,200,110,.55); background:rgba(30,20,8,.7); border-radius:8px; font-weight:700;}
+  .slot{flex:none; width:38px; height:38px; border-radius:10px; border:1px dashed rgba(255,255,255,.28);
+    background:rgba(0,0,0,.18); display:flex; align-items:center; justify-content:center; font-size:23px;}
+  .slot.filled{border-style:solid; border-color:rgba(255,255,255,.55); background:rgba(255,255,255,.14);}
+  .slot.filled.ok{cursor:pointer;}
+  .slot.filled.ok:active{transform:scale(.93);}
+  .slot.pop{animation:slotPop .42s cubic-bezier(.3,.9,.4,1.1);}
+  @keyframes slotPop{0%{transform:scale(.4) translateY(10px); opacity:.2}
+    62%{transform:scale(1.14) translateY(-2px); opacity:1}
+    100%{transform:scale(1) translateY(0)}}
+
+  /* ---- HUD / 按钮 ---- */
+  #btnRules{position:absolute; right:44px; top:6px; background:rgba(255,255,255,.10); border:1px solid #40304f;
+    color:#d8c6e8; font-size:13px; border-radius:9px; padding:3px 7px; cursor:pointer; z-index:6;}
+  #btnReset{position:absolute; right:6px; top:6px; background:rgba(255,255,255,.10); border:1px solid #40304f;
+    color:#d8c6e8; font-size:13px; border-radius:9px; padding:3px 7px; cursor:pointer; z-index:6;}
+  #btnReset:active{transform:scale(.94);}
+  .hud{text-align:center; color:#f0e2d8; font-size:13px;}
+  .hud b{font-size:15px;}
+  #sbPhone.phone{color:#ffd35c;}
+  #hudMoney{font-size:11px; color:#ffd35c; margin-left:6px; font-family:monospace; letter-spacing:.5px;}
+  .hud .sub{color:#b4a0c0; font-size:12px; margin-top:2px;}
+  #stealPanel{display:none; background:rgba(14,8,20,.96); border:1px solid #6a3040; border-radius:14px;
+    padding:10px 12px; z-index:16;}
+  #stealPanel.show{display:block; animation:pop .25s;}
+  .spTitle{font-size:12px; color:#ffb0b8; margin-bottom:8px;}
+  .spList{display:flex; gap:8px; flex-wrap:wrap;}
+  .spList .slot{width:44px; height:44px; font-size:26px; border-style:solid; border-color:#ff7b8a;}
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:9px;}
+  button{font-family:inherit; border:none; cursor:pointer; border-radius:15px; font-size:15px;
+    font-weight:700; padding:13px 8px; color:#fff; transition:transform .08s, opacity .15s;}
+  button:active{transform:scale(.96);}
+  button:disabled{opacity:.35; cursor:not-allowed;}
+  #btnSelf{background:#4f86e8;}
+  #btnOpp{background:#d9453a;}
+  .log{background:#171020; color:#cbbbd6; border:1px solid #2c2138; border-radius:14px;
+    padding:10px 12px; font-size:12.5px; line-height:1.75; max-height:150px; overflow-y:auto;}
+  .log p{padding:1px 0; border-bottom:1px dashed rgba(255,255,255,.07);}
+  .log p:first-child{color:#fff;}
+
+  /* ---- 镜头推拉 ---- */
+  #room{position:relative;}
+  #vignette{position:absolute; inset:0; z-index:9; pointer-events:none; opacity:0;
+    transition:opacity .45s ease;
+    background:radial-gradient(58% 54% at 50% 47%, rgba(0,0,0,0) 26%, rgba(0,0,0,.86) 100%);}
+  #room.cam-in #vignette{opacity:1;}
+
+  /* ---- 舞台演出层 ---- */
+  #stageFx{position:absolute; inset:0; z-index:12; pointer-events:none;}
+  .fx{position:absolute; left:50%; top:47%; font-size:32px; opacity:0; line-height:1;
+    filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
+  @keyframes fxDice{0%{opacity:0;transform:translate(150px,-46px) rotate(0) scale(1)}
+    16%{opacity:1}62%{opacity:1;transform:translate(-4px,-96px) rotate(520deg) scale(1.05)}
+    100%{opacity:0;transform:translate(-18px,-104px) rotate(610deg) scale(1)}}
+  .fx.dice{animation:fxDice .95s ease-out forwards;}
+  @keyframes fxShockA{0%{opacity:0;transform:translate(-150px,46px) scale(.55) rotate(-24deg)}
+    22%{opacity:1;transform:translate(-56px,182px) scale(.95) rotate(-6deg)}
+    44%{opacity:1;transform:translate(-24px,200px) scale(1) rotate(0)}
+    58%{opacity:.9;transform:translate(-20px,197px) scale(1.16)}
+    100%{opacity:0;transform:translate(-18px,196px) scale(.9)}}
+  @keyframes fxShockB{0%{opacity:0;transform:translate(150px,46px) scale(.55) rotate(24deg) scaleX(-1)}
+    22%{opacity:1;transform:translate(56px,182px) scale(.95) rotate(6deg) scaleX(-1)}
+    44%{opacity:1;transform:translate(24px,200px) scale(1) rotate(0) scaleX(-1)}
+    58%{opacity:.9;transform:translate(20px,197px) scale(1.14) scaleX(-1)}
+    100%{opacity:0;transform:translate(18px,196px) scale(.9) scaleX(-1)}}
+  .fx.shockA{animation:fxShockA 1.05s ease-out forwards;}
+  .fx.shockB{animation:fxShockB 1.05s ease-out forwards;}
+  @keyframes fxCase{0%{opacity:0;transform:translate(4px,-70px) scale(.82) rotate(-8deg)}
+    55%{opacity:1;transform:translate(0,4px) scale(1) rotate(2deg)}
+    72%{opacity:1;transform:translate(0,-2px) scale(1.05) rotate(-2deg)}
+    100%{opacity:1;transform:translate(0,0) scale(1) rotate(0)}}
+  .fx.payout{top:44%; animation:fxCase .85s ease-out forwards; font-size:52px;}
+  @keyframes fxCash{0%{opacity:0;transform:translate(var(--dx),-4px) scale(.7)}
+    35%{opacity:1;transform:translate(var(--dx),-42px) scale(1.05)}
+    100%{opacity:.9;transform:translate(var(--dx),-54px) scale(.95)}}
+  .fx.cash{top:44%; animation:fxCash 1s ease-out forwards; font-size:26px; animation-delay:var(--dl);}
+  @keyframes fxLever{0%{opacity:0;transform:translateY(-120px) scale(.6) rotate(-22deg)}
+    58%{opacity:1;transform:translateY(-6px) scale(1.12) rotate(9deg)}
+    100%{opacity:1;transform:translateY(0) scale(1) rotate(0)}}
+  .fx.lever{animation:fxLever .75s ease-out forwards; font-size:38px;}
+  @keyframes fxHandOut{0%{opacity:1;transform:translateY(0) scale(1)}
+    100%{opacity:0;transform:translateY(150px) scale(.8)}}
+  .fx.gone{animation:fxHandOut .9s ease-out forwards;}
+
+  /* ---- 道具演出 ---- */
+  .fx.flying{opacity:1; transition:transform .3s cubic-bezier(.3,.9,.4,1), opacity .25s;}
+  .fx.held{opacity:1;}
+  #gun{transition:transform .35s cubic-bezier(.3,.9,.4,1), filter .3s;}
+  #gun.sawed{transform:scaleX(.74) translateX(-6px); filter:drop-shadow(0 0 9px rgba(255,70,50,.85));}
+  #rig.zoom{transition:transform .4s;}
+  #rig.zoom .gun-zoom{transform:scale(1.18);}
+
+  /* ---- 字幕（场景内一行，不是弹窗） ---- */
+  #caption{position:absolute; left:50%; top:auto; bottom:8%; transform:translate(-50%,-50%);
+    font-size:13px; letter-spacing:1.4px; color:#ffdfae; white-space:nowrap;
+    background:rgba(10,6,16,.74); border:1px solid rgba(255,190,110,.38); border-radius:9px;
+    padding:4px 11px; text-shadow:0 1px 6px #000;
+    opacity:0; transition:opacity .3s; z-index:11; pointer-events:none; max-width:88%;}
+  #caption.on{opacity:1;}
+
+  /* ---- 起搏器白光 ---- */
+  #whiteOut{position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:20;}
+  #whiteOut.on{animation:wflash .55s ease-out;}
+  @keyframes wflash{0%{opacity:.9}55%{opacity:.22}100%{opacity:0}}
+
+  /* ---- 结算选项直接摆上按钮区 ---- */
+  #endBar{display:none; grid-template-columns:1fr 1fr; gap:9px;}
+  #btnBonus{background:#c08a1e;}
+  #btnCash{background:#2f8f5b;}
+  #endBar button{font-size:clamp(12px,3.3vw,14px); padding:11px 6px; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis;}
+  #endBar.one{grid-template-columns:1fr;}
+
+  @keyframes pop{from{transform:scale(.82); opacity:0}to{transform:scale(1); opacity:1}}
+
+  /* ---- 矮视口：横屏手机 / 小窗，压缩纵向，任何东西都不许被切 ---- */
+  @media (max-height: 620px){
+    #arena{gap:5px; padding:4px 8px 8px;}
+    #tableWrap{padding:15px 4px;}
+    #felt{height:clamp(210px, 56vh, 330px);}
+    #gun{font-size:46px; line-height:46px; top:10px; left:4px;}
+    #rig{width:58px; height:58px; margin:-29px 0 0 -29px;}
+    #rigHand{left:33px; top:28px; font-size:19px;}
+    #rigHand2{left:46px; top:25px; font-size:18px;}
+    .face{font-size:52px;}
+    #dealerFace{top:-28px;}
+    #playerFace{bottom:-34px;}
+    #dealerFace{top:-34px;}
+    .idleHand{font-size:38px;}
+    #dealerHandL,#dealerHandR{top:8px;}
+    #playerHandL,#playerHandR{bottom:8px;}
+    .slot{width:30px; height:30px; font-size:18px; border-radius:8px;}
+    #playerSlots{width:136px; gap:4px; bottom:14px;}
+    #dealerSlots{width:136px; gap:4px; top:14px;}
+    .scoreboard{font-size:10px; padding:6px 7px;}
+    .scoreboard .r{min-width:74px;}
+    #shells .sh{width:18px; height:10px;}
+    .row2 button, #endBar button{padding:10px 6px; font-size:13px;}
+    .speechBar{padding:6px 10px;}
+    .speechTx{font-size:12px;}
+  }
+  @media (max-height: 620px){
+    #home{padding:22px 20px 24px; gap:5px;}
+    .hTitle{font-size:clamp(24px,7vw,30px);}
+    .hEn{margin-top:-2px;}
+    .hArt{font-size:clamp(40px,11vw,54px); margin:4px 0 0;}
+    #btnHomeStart{padding:12px 0; font-size:15px; margin-top:2px;}
+    .hRow button{padding:7px 14px; font-size:12px;}
+    .hFoot{display:none;}
+    .hBest{margin-top:2px;}
+  }
+  /* ---- 横屏：横向富余全部用掉，桌子加宽、件件加大 ---- */
+  @media (orientation: landscape) and (max-height: 640px){
+    #arena{max-width:min(96vw, 700px);}
+    #tableWrap{padding:12px 4px;}
+    #felt{height:clamp(200px, 60vh, 340px);}
+    .face{font-size:62px;}
+    .idleHand{font-size:50px;}
+    .slot{width:40px; height:40px; font-size:22px; border-radius:11px;}
+    #playerSlots,#dealerSlots{width:auto; max-width:88%; flex-wrap:nowrap; gap:6px;}
+    #playerSlots{bottom:22px;}
+    #dealerSlots{top:22px;}
+    .scoreboard{left:18px; top:30%; font-size:13px; padding:9px 12px;}
+    .scoreboard .r{min-width:112px;}
+    #shells{top:58%;}
+    #shells .sh{width:26px; height:14px; border-radius:5px;}
+    #gun{font-size:58px; line-height:58px;}
+    #rig{width:70px; height:70px; margin:-35px 0 0 -35px;}
+    #rigHand{left:40px; top:34px; font-size:22px;}
+    #rigHand2{left:55px; top:30px; font-size:21px;}
+  }
+  @media (max-height: 480px){
+    #felt{height:clamp(180px, 60vh, 280px);}
+    #gun{font-size:38px; line-height:38px;}
+    .face{font-size:44px;}
+    .idleHand{font-size:32px;}
+    .slot{width:26px; height:26px; font-size:16px;}
+    #playerSlots,#dealerSlots{width:120px;}
+  }
+  #rulesBox{position:fixed; inset:0; z-index:40; display:none; align-items:center; justify-content:center;
+    background:rgba(6,4,10,.86); padding:16px;}
+  #rulesBox.show{display:flex;}
+  .box.wide{max-width:330px; text-align:left;}
+  .rlist{margin:8px 0 14px; padding-left:16px; font-size:11.5px; line-height:1.85; color:#cfc0dd;}
+  .rlist b{color:#fff;}
+  #btnRulesClose{background:var(--ok); width:100%;}
+
+  /* ============ 主页 ============ */
+  #home{position:fixed; inset:0; z-index:34; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:9px; padding:64px 22px 60px;
+    background:
+      radial-gradient(58% 40% at 50% -6%, rgba(255,186,110,.20) 0%, rgba(255,186,110,0) 62%),
+      radial-gradient(120% 78% at 50% 4%, #4a2338 0%, #241528 44%, #0a080e 100%);
+    transition:opacity .5s ease;}
+  #home.gone{opacity:0; pointer-events:none;}
+  .hLamp{font-size:20px; filter:drop-shadow(0 0 12px rgba(255,190,110,.85)); animation:hSway 4s ease-in-out infinite;}
+  @keyframes hSway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+  .hTitle{font-size:clamp(28px,9vw,36px); font-weight:800; letter-spacing:5px; color:#f6e5d1;
+    text-shadow:0 0 20px rgba(226,72,61,.55), 0 3px 0 #6a1420, 0 6px 14px rgba(0,0,0,.6);}
+  .hEn{font-size:9.5px; letter-spacing:4px; color:#8b7598; margin-top:-4px;}
+  .hArt{font-size:clamp(58px,17vw,74px); line-height:1; margin:10px 0 2px;
+    filter:drop-shadow(0 12px 18px rgba(0,0,0,.62));}
+  .hArt span{display:inline-block; animation:hTilt 4.2s ease-in-out infinite;}
+  @keyframes hTilt{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(5deg)}}
+  .hRule{font-size:12.5px; color:#b6a3c5; letter-spacing:2.5px;}
+  #btnHomeStart{width:100%; max-width:286px; padding:15px 0; border-radius:16px; font-size:17px;
+    letter-spacing:2px; background:linear-gradient(135deg,#e2483d,#a3234b);
+    box-shadow:0 10px 24px rgba(170,40,60,.42); margin-top:6px;}
+  #btnHomeStart:active{transform:scale(.97);}
+  .hRow{display:flex; gap:9px; margin-top:3px;}
+  .hRow button{padding:9px 18px; font-size:13px; border-radius:12px; background:rgba(255,255,255,.07);
+    border:1px solid #47334f; color:#d8c6e8; font-weight:600;}
+  .hRow button:active{transform:scale(.96);}
+  .hBest{font-size:11px; color:#8b7598; letter-spacing:1px; margin-top:6px;}
+  .hBest b{color:#ffd35c; font-family:monospace; letter-spacing:.5px;}
+  .hLast{font-size:11px; color:#ff9aa2; letter-spacing:1px; min-height:15px;}
+  .hFoot{text-align:center; font-size:11px; color:#78688a; letter-spacing:1.4px;
+    line-height:1.9; margin-top:18px;}
+  .hFoot span{color:#a6707f;}
+</style>
+</head>
+<body>
+
+<!-- ================= 主页 ================= -->
+<div id="home">
+  <div class="hLamp">💡</div>
+  <div class="hTitle">恶魔轮盘赌</div>
+  <div class="hEn">BUCKSHOT ROULETTE · EMOJI</div>
+  <div class="hArt"><span>🔫</span></div>
+  <div class="hRule">两人进 · 一人出</div>
+  <div class="hLast" id="homeLast"></div>
+  <button id="btnHomeStart">🪑 坐下开赌</button>
+  <div class="hRow">
+    <button id="btnHomeRules">📜 玩法</button>
+  </div>
+  <div class="hBest">最高战绩 <b id="bestCash">$0</b></div>
+  <div class="hFoot">🖋 生死状压在门里的桌上，签了才上桌<br>
+    🔫 三轮 · <span>2 ⚡ / 4 ⚡ / 6 ⚡</span> · 慢一步子弹就贵一分</div>
+</div>
+
+<!-- ================= 生死状 ================= -->
+<div id="contract">
+  <div class="cHint">🚪 门后是一间没有窗的屋子。桌上压着一张纸，旁边是一台旧<b>打字机</b>。</div>
+  <div class="paper">
+    <div class="ptitle">生死状</div>
+    <div class="peng">GENERAL RELEASE OF LIABILITY</div>
+    <div class="pbody">
+      一、本人自愿进入本厅，参与以 12 号霰弹枪进行的赌局。<br>
+      二、赌局中的一切伤亡、债务与后果，由本人自负，本厅与庄家概不负责。<br>
+      三、两人进入，一人离开。<br>
+      四、赢了可以带走钱，输了留下名字。
+    </div>
+    <div class="pname">ENTER NAME：</div>
+    <input id="nameInput" maxlength="8" placeholder="在这里签下你的名字">
+    <button id="btnSign">✍️ 签字 · 按手印</button>
+    <div class="stamp" id="stamp">本人<br>亲签</div>
+  </div>
+</div>
+
+<!-- ================= 开场 ================= -->
+<div id="intro">
+  <div class="hallLamp">💡</div>
+  <div class="hall-floor"></div>
+  <div class="door-glow"></div>
+  <div class="hall-door">🚪</div>
+  <div class="walker" id="walker">🙂</div>
+  <div class="hall-ui">
+    <div class="hall-hint" id="hallHint">楼道尽头就是那间赌厅</div>
+    <button id="btnHall">🚶 走向大门</button>
+  </div>
+</div>
+
+<!-- ================= 赌厅 ================= -->
+<div id="arena">
+  <div class="hud">
+    <button id="btnReset" title="重开">🔄</button>
+    <button id="btnRules" title="规则">📜</button>
+    <div><b id="hudTitle">第一回合</b>
+      <span id="hudMoney">💰 $0</span></div>
+    <div class="sub" id="hudSub"></div>
+  </div>
+
+  <div id="speechBar" class="dealer">
+    <div id="whoWrap"><span id="speechWho">😈</span><span id="speechName">DEALER</span></div>
+    <span id="speechTx"></span>
+  </div>
+
+  <div id="room">
+    <div id="vignette"></div>
+    <div class="lamp"><div class="cord"></div><div class="bulb">💡</div><div class="beam"></div></div>
+    <div class="neon a">📻</div><div class="neon b">🎛️</div>
+
+    <div id="tableWrap">
+      <div id="felt">
+        <div class="inner-rect"></div>
+
+        <div class="zone v a"></div>
+        <div class="zone v b"></div>
+        <div class="zone h c"></div>
+
+        <div id="shells"></div>
+
+        <div class="scoreboard">
+          <div class="r"><span class="lbl">DEALER</span><span id="sbDealer"></span></div>
+          <div class="r"><span class="lbl">PLAYER</span><span id="sbPlayer"></span></div>
+          <div class="r"><span class="lbl">PHONE</span><span id="sbPhone" class="phone">—</span></div>
+          <div class="r"><span class="lbl">BAG</span><span id="sbBag">0/8</span></div>
+        </div>
+
+        <div class="slotsWrap" id="dealerSlots"></div>
+        <div class="slotsWrap" id="playerSlots"></div>
+
+        <div id="aim"></div>
+
+        <!-- 枪与握枪手：同一个 rig，手永远贴在枪上 -->
+        <div id="rig">
+          <span id="gun">🔫</span>
+          <span id="rigHand">✊</span>
+          <span id="rigHand2">✊</span>
+          <span id="flash">✨</span>
+        </div>
+
+        <!-- 待机时手搭在桌前 -->
+        <span class="idleHand" id="dealerHandL">🤚</span>
+        <span class="idleHand" id="dealerHandR">🤚</span>
+        <span class="idleHand" id="playerHandL">🤚</span>
+        <span class="idleHand" id="playerHandR">🤚</span>
+      </div>
+
+      <!-- 两人贴着赌桌 -->
+      <div class="face" id="dealerFace">😈</div>
+      <div class="face" id="playerFace">🙂</div>
+      <div id="stageFx"></div>
+
+
+      <div id="stageFx"></div>
+    </div>
+  </div>
+
+  <div id="endBar">
+    <button id="btnBonus">🔁 加倍或是空手</button>
+    <button id="btnCash">💰 携款离开</button>
+  </div>
+
+  <div id="stealPanel">
+    <div class="spTitle">💉 拿走庄家的哪一件？（5 秒）</div>
+    <div class="spList" id="spList"></div>
+  </div>
+
+  <div class="row2" id="row2">
+    <button id="btnSelf">🔫 射自己</button>
+    <button id="btnOpp">🔫 射庄家</button>
+  </div>
+
+</div>
+
+<div id="rulesBox">
+  <div class="box wide">
+    <h2>原版规则清单</h2>
+    <ul class="rlist">
+      <li>三轮赌局：<b>2 ⚡ / 4 ⚡ / 6 ⚡</b>，先手永远是你。</li>
+      <li>装填公开数量：几发实弹、几发空弹写在桌上，<b>顺序谁都不知道</b>。</li>
+      <li>实弹打谁，回合都交给对面；空弹打自己才保住回合，空弹打对面换手。</li>
+      <li><b>第一回合没有道具</b>；第二回合每次装填各发 2 件，决胜回合各发 4 件，最多带 8 件。</li>
+      <li>道具：🔍放大镜 / 🥤快乐水 / 🪚锯子 / 🔗手铐 / 🚬香烟。</li>
+      <li>加倍模式追加：🔁倒转器 / 📱一次性手机 / 💊过期药品 / 💉肾上腺素。</li>
+      <li>前两回合被打空 → 除颤器拉回来，本回合重打。</li>
+      <li>决胜回合掉到 2⚡ 落闸刀：一枪致命，香烟补不回来。</li>
+      <li>赢下三轮拿钱（越快越多，最高 $70,000）；可以携款离开，也可以<b>加倍或是空手</b>再赌三轮。</li>
+    </ul>
+    <button id="btnRulesClose">知道了</button>
+  </div>
+</div>
+
+<div id="whiteOut"></div>
+
+<script>
+/* ================= 配置 ================= */
+const ITEMS = {
+  glass:{e:'🔍', n:'放大镜'},
+  beer :{e:'🥤', n:'快乐水'},
+  saw  :{e:'🪚', n:'锯子'},
+  cuff :{e:'🔗', n:'手铐'},
+  cig  :{e:'🚬', n:'香烟'},
+  // 原版只在「加倍或是空手」与多人模式出现的四种
+  inverter:{e:'🔁', n:'倒转器'},
+  adr     :{e:'💉', n:'肾上腺素'},
+  phone   :{e:'📱', n:'一次性手机'},
+  pills   :{e:'💊', n:'过期药品'},
+};
+const ITEM_IDS = Object.keys(ITEMS);
+const BASE_IDS  = ['glass','beer','saw','cuff','cig'];
+const BONUS_IDS = ['glass','beer','saw','cuff','cig','inverter','adr','phone','pills'];
+const MAX_ITEMS = 8;
+let NAME = '无名氏';
+
+// 原版普通模式三轮：2 / 4 / 6 点电量，道具从第二回合才发
+const STAGES = [
+  {hp:2, min:2, max:4, items:0, title:'第一回合', sub:'2 ⚡ · 本回合没有道具，纯靠数弹'},
+  {hp:4, min:4, max:6, items:2, title:'第二回合', sub:'4 ⚡ · 每次装填各发 2 个道具'},
+  {hp:6, min:6, max:8, items:4, title:'最终回合', sub:'6 ⚡ · 每次装填各发 4 件 · 掉到 2⚡ 落闸刀', sudden:true},
+];
+
+// 加倍或是空手：每轮电量与道具都是随机的
+function makeBonusStages(){
+  const hp1 = 3 + rnd(4), hp2 = 4 + rnd(3), hp3 = 5 + rnd(3);
+  return [
+    {hp:hp1, min:2, max:4, items:0, title:'加倍·第一轮', sub:`${hp1} ⚡ · 随机装填，先手在你`},
+    {hp:hp2, min:4, max:6, items:2, title:'加倍·第二轮', sub:`${hp2} ⚡ · 每次装填各发 2 件`},
+    {hp:hp3, min:6, max:8, items:4, title:'加倍·决胜', sub:`${hp3} ⚡ · 每次装填各发 4 件 · 掉到 2⚡ 落闸刀`, sudden:true},
+  ];
+}
+
+/* ================= 状态 ================= */
+let S, CASH = 0, RUN = 0, BONUS = false, BSTAGES = null, STARTAT = 0;
+const $ = id => document.getElementById(id);
+const rnd = n => Math.floor(Math.random()*n);
+const pool = () => BONUS ? BONUS_IDS : BASE_IDS;
+const cfg = () => (BONUS ? BSTAGES : STAGES)[S.stage];
+const sleep = ms => new Promise(r=>setTimeout(r, ms));
+
+function newState(){
+  const first = (BONUS && BSTAGES) ? BSTAGES[0] : STAGES[0];
+  return {
+    stage:0,
+    player:{hp:first.hp, items:[], locked:false},
+    dealer:{hp:first.hp, items:[], locked:false},
+    sudden:{player:false, dealer:false},
+    chamber:[],
+    turn:'player',
+    sawn:false,
+    revealed:null,
+    over:false, busy:false, transition:false,
+    phoneHint:null,                               // 手机给出的情报
+    steal:null,                                   // 肾上腺素偷东西的临时状态
+  };
+}
+
+/* 钱 */
+const money = () => '$' + CASH.toLocaleString('en-US');
+function showMoney(){ const m = $('hudMoney'); if(m) m.textContent = '💰 ' + money(); }
+function scoreMoney(){
+  const sec = Math.max(1, Math.round((Date.now() - STARTAT)/1000));
+  const base = Math.max(6000, 70000 - sec*260);
+  return Math.round(base/1000)*1000;            // 越快越值钱，跟原版一样
+}
+
+/* ================= 事件记录：不往界面上贴文字（只用画面和对白） ================= */
+const EVENTS = [];
+function log(html){
+  EVENTS.push(html);
+  if(EVENTS.length > 60) EVENTS.shift();
+}
+
+/* ================= 对话 ================= */
+const LINES = {
+  open:[
+    '规则很简单：轮到谁，谁就拿起枪。',
+    '坐稳了。这枪里装了什么，我说了也不算。',
+    '三轮。撑到最后的人，才能自己走出这扇门。',
+  ],
+  load:[
+    '装了几发我告诉你，顺序？谁都不知道——包括我。',
+    '我是自己上的弹，可我也说不出第几发是实弹。',
+    '实弹几发、空弹几发，摆在明面上。下一发是什么，赌。',
+    '膛里就这么多。数得清，猜不准。',
+    '上膛顺序是这张桌子唯一的秘密，而我恰好也不知道。',
+  ],
+  yourturn:[
+    '轮到你了。手别抖，抖了更容易打偏。',
+    '想清楚再扣扳机，空弹也是本钱。',
+    '我这边不着急，你先。',
+    '枪在正中间。手，伸过来。',
+  ],
+  dealerTurn:[
+    '枪归我了。你坐着就行。',
+    '我猜一发，猜错算你运气好。',
+    '别眨眼。',
+  ],
+  emptySelf:[
+    '空弹。运气站在你这边。',
+    '咔一声，什么都没有。继续。',
+    '白响一枪，回合还在你手上。',
+  ],
+  emptyOpp:[
+    '空弹。轮到我了。',
+  ],
+  hitPlayer:[
+    '疼吗？疼就对了。',
+    '这一下算你的。',
+  ],
+  hitDealer:[
+    '……有意思。',
+    '好枪。别得意。',
+  ],
+  saw:[
+    '锯短了枪管？这桌子越来越不体面了。',
+  ],
+  beer:[
+    '倒掉一发。聪明，也很怂。',
+  ],
+  sudden:[
+    '闸刀拉下去了。下面中一枪，就是收场。',
+  ],
+  win:['……你赢了。出门往左，别回头。'],
+  lose:['坐下吧。下一批人还没来。'],
+};
+const pick = a => a[rnd(a.length)];
+
+let sayTimer = null, sayHide = null;
+function say(who, text){
+  const bar = $('speechBar'), tx = $('speechTx');
+  bar.className = who;
+  bar.style.borderLeftColor = who==='dealer' ? '#ff5a5a' : '#5ce39a';
+  $('speechWho').textContent = who==='dealer' ? '😈' : '🙂';
+  $('speechName').textContent = who==='dealer' ? 'DEALER' : 'YOU';
+  tx.textContent = '';
+  clearInterval(sayTimer); clearTimeout(sayHide);
+  const chars = [...text];
+  let i = 0;
+  sayTimer = setInterval(()=>{
+    tx.textContent += chars[i++];
+    if(i >= chars.length) clearInterval(sayTimer);
+  }, 30);
+  sayHide = setTimeout(()=>{
+    bar.className = who + ' blank';   // 收起成灰字，保留最后一句
+  }, 1600 + chars.length*100);
+}
+function hush(){ clearInterval(sayTimer); clearTimeout(sayHide); }
+
+/* ================= 装填 ================= */
+function reload(){
+  const c = cfg();
+  const n = c.min + rnd(c.max - c.min + 1);
+  const live = 1 + rnd(n - 1);           // 保底至少 1 实弹 + 1 空弹
+  const arr = [];
+  for(let i=0;i<live;i++) arr.push('live');
+  for(let i=live;i<n;i++) arr.push('blank');
+  for(let i=arr.length-1;i>0;i--){ const j=rnd(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  S.chamber = arr;
+  S.revealed = null;
+  S.shellAnimDone = false;
+  const g=$('gun'); if(g) g.classList.remove('sawed');
+  S.phoneHint = null;
+  S.sawn = false;
+  log(`🔄 装填 <b>${n}</b> 发：🔴 ${live} 实弹 / ⚪ ${n-live} 空弹`);
+  if(Math.random() < 0.6) say('dealer', pick(LINES.load));
+  // 装填后按原版发道具：第二回合各 2 件，决胜回合各 4 件（第一回合不给）
+  const before = {player:S.player.items.length, dealer:S.dealer.items.length};
+  for(let i=0;i<c.items;i++){ grant('player'); grant('dealer'); }
+  if(c.items > 0){
+    const got = {player:S.player.items.length-before.player, dealer:S.dealer.items.length-before.dealer};
+    let msg = `🎁 这一轮装填：两人各 +${c.items} 件道具（你 +${got.player} / 他 +${got.dealer}）`;
+    S.newSlots = got.player;
+    if(got.player===0) msg += ' —— 你的 8 格满了，新发的不收了';
+    if(got.dealer===0) msg += ' —— 庄家的 8 格也满了';
+    log(msg);
+  }else{
+    S.newSlots = 0;
+  }
+}
+
+function grant(side){
+  const f = S[side];
+  if(f.items.length >= MAX_ITEMS) return;
+  const p = pool();
+  f.items.push(p[rnd(p.length)]);
+}
+
+/* ================= 渲染 ================= */
+function charges(side){
+  const f = S[side], c = cfg();
+  if(S.sudden[side]) return '⚡⚡' + '▓'.repeat(Math.max(0, c.hp-2));
+  return '⚡'.repeat(Math.max(0,f.hp)) + '░'.repeat(Math.max(0,c.hp-f.hp));
+}
+function iconRow(items){
+  return items.map(id=>`<span class="slot filled">${ITEMS[id].e}</span>`).join('');
+}
+
+let reloading = false;
+function render(){
+  const p = S.player, d = S.dealer, c = cfg();
+  // 兜底：空膛卡在自己回合 → 直接装填，避免按钮全灰卡死
+  if(!reloading && !S.over && !S.busy && !S.transition && S.turn==='player' && S.chamber.length===0){
+    reloading = true;
+    try{ reload(); } finally { reloading = false; }
+  }
+
+  $('hudTitle').textContent = c.title;
+  $('hudSub').textContent = c.sub;
+  showMoney();
+
+  $('sbDealer').textContent = charges('dealer');
+  $('sbPlayer').textContent = charges('player');
+  $('sbBag').textContent = `${S.player.items.length}/8`;
+  const ph = S.phoneHint;
+  $('sbPhone').textContent = ph ? `第${ph.idx+1}发${ph.type==='live'?'🔴':'⚪'}` : '—';
+
+  // 子弹盘：只显示组成（顺序未知）
+  const live = S.chamber.filter(x=>x==='live').length;
+  const blank = S.chamber.length - live;
+  let sh = '';
+  const drop = !S.shellAnimDone;
+  let k = 0;
+  for(let i=0;i<live;i++) sh += `<span class="sh live${drop?' drop':''}" style="animation-delay:${k++*80}ms"></span>`;
+  for(let i=0;i<blank;i++) sh += `<span class="sh blank${drop?' drop':''}" style="animation-delay:${k++*80}ms"></span>`;
+  $('shells').innerHTML = sh;
+  if(drop && S.chamber.length) S.shellAnimDone = true;
+
+  // 道具格
+  const ps = $('playerSlots');
+  ps.innerHTML = '';
+  for(let i=0;i<MAX_ITEMS;i++){
+    const id = p.items[i];
+    const el = document.createElement('span');
+    const fresh = (i >= p.items.length - (S.newSlots||0)) && id;
+    el.className = 'slot' + (id ? ' filled ok' : '') + (fresh ? ' pop' : '');
+    el.textContent = id ? ITEMS[id].e : '';
+    if(id){ el.onclick = ()=>{
+      if(S.over || S.busy || S.transition || S.turn!=='player') return;
+      useItem('player', id);
+    }; }
+    ps.appendChild(el);
+  }
+  const ds = $('dealerSlots');
+  ds.innerHTML = '';
+  for(let i=0;i<MAX_ITEMS;i++){
+    const id = d.items[i];
+    const el = document.createElement('span');
+    el.className = 'slot' + (id ? ' filled' : '');
+    el.textContent = id ? ITEMS[id].e : '';
+    ds.appendChild(el);
+  }
+
+  // 手铐扣在对面手上
+  ['player','dealer'].forEach(sd=>{
+    handsOf(sd).forEach(hid=>{ const el=$(hid); if(el) el.classList.toggle('cuffed', !!S[sd].locked); });
+  });
+
+  // 表情随血量
+  $('playerFace').textContent = p.hp >= c.hp ? '🙂' : p.hp > c.hp/2 ? '😐' : p.hp > 1 ? '😰' : '😱';
+  $('dealerFace').textContent = d.hp >= c.hp ? '😈' : d.hp > c.hp/2 ? '😈' : d.hp > 1 ? '😵' : '😵‍💫';
+
+  // 按钮
+  const ok = !S.over && !S.busy && !S.transition && S.turn==='player' && S.chamber.length>0;
+  $('btnSelf').disabled = !ok;
+  $('btnOpp').disabled = !ok;
+}
+
+/* ================= 动作：手伸过去 → 握住 → 举枪瞄准 ================= */
+function rigSet(y, deg, kick){
+  $('rig').style.transform = `translateY(${y}px) rotate(${deg}deg) translateX(${kick||0}px)`;
+}
+
+function dirTo(victim){
+  // 庄家在上方、玩家在下方；枪往被打的那个人指
+  return victim==='dealer' ? {y:-8, deg:90, aim:'up'} : {y:26, deg:-90, aim:'down'};
+}
+
+const HAND_IDS = ['playerHandL','playerHandR','dealerHandL','dealerHandR'];
+function handsOf(side){ return side==='player' ? ['playerHandL','playerHandR'] : ['dealerHandL','dealerHandR']; }
+function allHands(fn){ HAND_IDS.forEach(id=>{ const el=$(id); if(el) fn(el,id); }); }
+function handRest(side){
+  const rest = side==='player'
+    ? [[13,'auto',14,'-10deg'],[87,'auto',14,'10deg']]
+    : [[13,14,'auto','189deg'],[87,14,'auto','171deg']];
+  handsOf(side).forEach((id,i)=>{
+    const el=$(id); if(!el) return;
+    const r=rest[i];
+    el.style.left = r[0]+'%';
+    el.style.top = (r[1]==='auto'?'auto':r[1]+'px');
+    el.style.bottom = (r[2]==='auto'?'auto':r[2]+'px');
+    el.style.transform = `translate(-50%,0) rotate(${r[3]})`;
+  });
+}
+
+async function gripGun(shooter, selfShot){
+  const hands = handsOf(shooter).map($);
+  // 1. 两只手一起从桌沿滑到枪柄上
+  hands.forEach((h,i)=>{
+    h.style.left = i===0 ? '44%' : '56%';
+    h.style.top = '47%';
+    h.style.bottom = 'auto';
+    h.style.transform = 'translate(-50%,-50%) scale(1.16)';
+  });
+  await sleep(360);
+  // 2. 两只手贴到枪上，换成双 ✊；对面两只手仍留在桌上
+  hands.forEach(h=>h.style.opacity='0');
+  $('rigHand').classList.add('on');
+  $('rigHand2').classList.add('on');
+  // 3. 举枪瞄准
+  const victimSide = selfShot ? shooter : (shooter==='player' ? 'dealer' : 'player');
+  const d = dirTo(victimSide);
+  rigSet(d.y, d.deg, 0);
+  $('aim').className = d.aim;
+  await sleep(330);
+}
+
+async function releaseGun(shooter){
+  $('aim').className = '';
+  rigSet(0, 0, 0);
+  $('rigHand').classList.remove('on');
+  $('rigHand2').classList.remove('on');
+  handsOf(shooter).forEach(id=>{ const el=$(id); if(el) el.style.opacity='1'; });
+  handRest(shooter);
+  await sleep(260);
+}
+
+function resetHands(){
+  allHands(el=>{ el.style.opacity='1'; });
+  handRest('player'); handRest('dealer');
+  $('rigHand').classList.remove('on');
+  $('rigHand2').classList.remove('on');
+  $('aim').className = '';
+  rigSet(0, 0, 0);
+}
+
+function flash(){
+  const f = $('flash');
+  f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+}
+
+/* ================= 开枪 ================= */
+function applyDamage(side, dmg){
+  const f = S[side], c = cfg();
+  if(c.sudden && S.sudden[side]){ f.hp = 0; return true; }   // 闸刀已拉下：一枪致命
+  f.hp = Math.max(0, f.hp - dmg);
+  if(c.sudden && !S.sudden[side] && f.hp <= 2){
+    S.sudden[side] = true;
+    log(`⚡ ${side==='player'?'你':'庄家'}的电量掉到 2 以下 —— 闸刀落下，除颤器线路被切断，接下来一枪就死`);
+    say('dealer', LINES.sudden[0]);
+  }
+  return false;
+}
+
+async function performShot(shooter, target){
+  if(S.busy || S.over || S.transition) return false;
+  S.busy = true; busyAt = Date.now(); render();
+  try{
+
+  const selfShot = target === 'self';
+  const victim = selfShot ? shooter : (shooter==='player' ? 'dealer' : 'player');
+  const who = shooter==='player' ? '你' : '庄家';
+
+  await gripGun(shooter, selfShot);
+
+  // 开火
+  flash();
+  const dir = dirTo(victim);
+  rigSet(dir.y, dir.deg, 9);                   // 后坐力
+  const bullet = S.chamber.shift();
+  S.revealed = null;
+  const wasSawn = S.sawn;
+  S.sawn = false;
+  { const g=$('gun'); if(g) g.classList.remove('sawed'); }   // 这一枪打完，枪管复原
+
+  let passedTurn = true;
+  if(bullet === 'live'){
+    const dmg = wasSawn ? 2 : 1;
+    applyDamage(victim, dmg);
+    log(`💥 ${who}朝${selfShot?'自己':'对面'}开枪 —— 🔴 实弹！${victim==='player'?'你':'庄家'} -${dmg}${wasSawn?'（🪚锯伤）':''}`);
+    $(victim==='player'?'playerFace':'dealerFace').classList.remove('hurt');
+    void $(victim==='player'?'playerFace':'dealerFace').offsetWidth;
+    $(victim==='player'?'playerFace':'dealerFace').classList.add('hurt');
+    passedTurn = true;                          // 原版：实弹打谁，回合都交给对方
+    if(victim==='player') say('dealer', pick(LINES.hitPlayer));
+    else if(Math.random()<0.7) say('dealer', pick(LINES.hitDealer));
+  }else{
+    log(`🔊 ${who}朝${selfShot?'自己':'对面'}开枪 —— ⚪ 空弹`);
+    passedTurn = !selfShot;                     // 空弹打自己 → 保留回合
+    if(selfShot) say('player', pick(LINES.emptySelf));
+    else say('player', pick(LINES.emptyOpp));
+  }
+
+  $(shooter==='player'?'playerFace':'dealerFace').classList.remove('recoil');
+  void $(shooter==='player'?'playerFace':'dealerFace').offsetWidth;
+  $(shooter==='player'?'playerFace':'dealerFace').classList.add('recoil');
+
+  render();
+  await sleep(240);
+  await releaseGun(shooter);
+
+  // 死亡判定
+  const deadSide = S.player.hp<=0 ? 'player' : (S.dealer.hp<=0 ? 'dealer' : null);
+  if(deadSide){ S.busy = false; death(deadSide); return true; }
+
+  // 回合流转（先解锁，再渲染，否则按钮会一直是灰的 —— 这就是之前“卡住”的原因）
+  S.busy = false;
+  if(passedTurn){ passTurn(shooter); }
+  else {
+    if(S.chamber.length===0) reload();
+  }
+  render();
+  return true;
+  }catch(e){
+    console.warn('开枪动画出错', e);
+    resetHands(); S.busy = false; S.transition = false; render();
+    return false;
+  }
+}
+
+function passTurn(from){
+  const next = from==='player' ? 'dealer' : 'player';
+  if(S[next].locked){
+    S[next].locked = false;
+    log(`🔗 ${next==='player'?'你':'庄家'}被手铐拖住，跳过这一回合`);
+    S.turn = from;
+  }else{
+    S.turn = next;
+  }
+  if(S.chamber.length===0) reload();
+  render();
+  if(S.turn==='player' && Math.random()<0.45) say('dealer', pick(LINES.yourturn));
+}
+
+/* ================= 道具 ================= */
+function useItem(side, id){
+  if(S.busy || S.over || S.transition) return false;
+  const f = S[side];
+  const idx = f.items.indexOf(id);
+  if(idx < 0) return false;
+  const who = side==='player' ? '你' : '庄家';
+
+  if(id === 'cig'){
+    if(S.sudden[side]){ log(`🚬 闸刀已落下，${who}的电量补不回来了`); return false; }
+    if(f.hp >= cfg().hp){ log(`🚬 ${who}电量已满`); return false; }
+  }
+  if(id === 'adr' && side === 'player' && !S.dealer.items.length){
+    log('💉 庄家桌上什么都没有，这一针白扎了');
+    f.items.splice(idx,1);
+    render();
+    return true;
+  }
+
+  f.items.splice(idx,1);
+  popFx(side, ITEMS[id].e);
+  itemAnim(side, id);
+
+  if(id === 'adr'){
+    log(`💉 ${who}打了一针肾上腺素，伸手去抢对面桌上的东西`);
+    if(side === 'player'){ openSteal(); return true; }
+    const pool = S.player.items.filter(x=>x!=='adr');
+    if(!pool.length){ log('💉 庄家的手在桌面上抓了个空'); render(); return true; }
+    const stolen = pool[rnd(pool.length)];
+    S.player.items.splice(S.player.items.indexOf(stolen),1);
+    log(`💉 庄家抢走了你的 ${ITEMS[stolen].n}，当场用了`);
+    doEffect('dealer', stolen);
+    render();
+    return true;
+  }
+
+  doEffect(side, id);
+  checkPillsDeath(side);
+  render();
+  return true;
+}
+
+/* 道具的实际效果（肾上腺素偷来的东西也走这里） */
+function doEffect(side, id){
+  const f = S[side], c = cfg();
+  const who = side==='player' ? '你' : '庄家';
+
+  if(id==='glass'){
+    S.revealed = S.chamber[0];
+    log(`🔍 ${who}看清了膛里这发：${S.revealed==='live'?'🔴 实弹':'⚪ 空弹'}`);
+  }else if(id==='beer'){
+    const out = S.chamber.shift();
+    S.revealed = null; S.phoneHint = null;
+    log(`🥤 ${who}灌下快乐水，抠出一发${out==='live'?'🔴实弹':'⚪空弹'}`);
+    if(side==='player' && Math.random()<0.6) say('dealer', LINES.beer[0]);
+    if(S.chamber.length===0) reload();
+  }else if(id==='saw'){
+    S.sawn = true;
+    log(`🪚 ${who}把枪管锯短了，下一发实弹伤害 ×2`);
+    if(side==='player' && Math.random()<0.6) say('dealer', LINES.saw[0]);
+  }else if(id==='cuff'){
+    const o = side==='player' ? 'dealer' : 'player';
+    S[o].locked = true;
+    log(`🔗 ${who}把对方铐在桌边，对面下一回合动不了`);
+  }else if(id==='cig'){
+    f.hp = Math.min(c.hp, f.hp+1);
+    log(`🚬 ${who}点了根烟，补 1 点电量`);
+  }else if(id==='inverter'){
+    if(!S.chamber.length){ log('🔁 膛里是空的，换了个寂寞'); return; }
+    const now = S.chamber[0]==='live' ? 'blank' : 'live';
+    S.chamber[0] = now;
+    if(S.revealed) S.revealed = now;
+    log(`🔁 ${who}按下倒转器，这一发被换成 <b>${now==='live'?'🔴 实弹':'⚪ 空弹'}</b>`);
+  }else if(id==='phone'){
+    if(S.chamber.length < 2){
+      log('📱 电话里只有一个声音：“真遗憾……” —— 情报没有');
+      return;
+    }
+    const i = 1 + rnd(S.chamber.length - 1);      // 不告诉你当前这发，跟原版一样
+    S.phoneHint = { idx:i, type:S.chamber[i] };
+    log(`📱 电话里说：从现在数第 <b>${i+1}</b> 发是 ${S.chamber[i]==='live'?'🔴 实弹':'⚪ 空弹'}`);
+  }else if(id==='pills'){
+    const lucky = Math.random() < 0.5;            // 原版一半一半
+    if(lucky){
+      f.hp = Math.min(c.hp, f.hp+2);
+      log(`💊 ${who}吞了过期药品 —— 走运，补 2 点电量`);
+    }else{
+      f.hp = Math.max(0, f.hp-1);
+      log(`💊 ${who}吞了过期药品 —— 药是坏的，掉 1 点电量`);
+    }
+  }
+}
+
+function checkPillsDeath(side){
+  if(S.player.hp<=0){ death('player'); return true; }
+  if(S.dealer.hp<=0){ death('dealer'); return true; }
+  return false;
+}
+
+/* ---- 肾上腺素：5 秒内抢一件 ---- */
+let stealTimer = null;
+function openSteal(){
+  const d = S.dealer.items.filter(x=>x!=='adr');
+  const list = $('spList');
+  list.innerHTML = '';
+  if(!d.length){ log('💉 庄家桌上没有能抢的东西'); return; }
+  S.steal = { until: Date.now()+5000 };
+  d.forEach(id=>{
+    const el = document.createElement('span');
+    el.className = 'slot filled ok';
+    el.textContent = ITEMS[id].e;
+    el.onclick = ()=>takeSteal(id);
+    list.appendChild(el);
+  });
+  $('stealPanel').classList.add('show');
+  clearInterval(stealTimer);
+  stealTimer = setInterval(()=>{
+    if(!S.steal){ clearInterval(stealTimer); return; }
+    if(Date.now() > S.steal.until) endSteal(true);
+  }, 180);
+}
+function takeSteal(id){
+  if(!S.steal) return;
+  const idx = S.dealer.items.indexOf(id);
+  if(idx < 0){ endSteal(false); return; }
+  S.dealer.items.splice(idx,1);
+  const name = ITEMS[id].n;
+  endSteal(false);
+  log(`💉 你抢走了庄家的 ${name}，当场用了`);
+  doEffect('player', id);
+  checkPillsDeath('player');
+  render();
+}
+function endSteal(timeout){
+  S.steal = null;
+  clearInterval(stealTimer); stealTimer = null;
+  const p = $('stealPanel'); if(p) p.classList.remove('show');
+  if(timeout) log('💉 你犹豫太久，针效过去了');
+}
+
+function popFx(side, emo){
+  const face = $(side==='player'?'playerFace':'dealerFace');
+  face.textContent = emo;
+  setTimeout(()=>render(), 600);
+}
+
+/* ================= 道具演出：真的把动作做出来 ================= */
+/* 动作坐标实时量取：跟着脸、手的位置走 */
+function relTo(el){
+  const f=$('stageFx');
+  if(!el||!f||typeof el.getBoundingClientRect!=='function') return {x:0,y:0};
+  const fr=f.getBoundingClientRect(), r=el.getBoundingClientRect();
+  if(!fr||!r) return {x:0,y:0};
+  return { x:(r.left+r.width/2)-(fr.left+fr.width/2),
+           y:(r.top+r.height/2)-(fr.top+fr.height/2) };
+}
+function faceAt(side){ const p=relTo($(side==='player'?'playerFace':'dealerFace')); p.y += side==='player' ? -46 : 46; p.x += 40; return p; }
+function handAt(side){ return relTo($(side==='player'?'playerHandL':'dealerHandL')); }
+function foeHandsAt(side){
+  const a=relTo($(side==='player'?'dealerHandL':'playerHandL'));
+  const b=relTo($(side==='player'?'dealerHandR':'playerHandR'));
+  return { x:(a.x+b.x)/2, y:(a.y+b.y)/2 };
+}
+
+function fxFly(emo, tx, ty, size, rot){
+  const sp=document.createElement('span');
+  sp.className='fx flying';
+  sp.textContent=emo;
+  sp.style.fontSize=(size||30)+'px';
+  sp.style.transform='translate(0px,0px) scale(.7)';
+  const host=$('stageFx'); if(host) host.appendChild(sp);
+  requestAnimationFrame(()=>{
+    sp.style.transform=`translate(${tx}px,${ty}px) scale(1) rotate(${rot||0}deg)`;
+  });
+  return sp;
+}
+function fxMove(sp, tx, ty, rot, scale){
+  if(!sp) return;
+  sp.style.transform=`translate(${tx}px,${ty}px) scale(${scale==null?1:scale}) rotate(${rot||0}deg)`;
+}
+async function itemAnim(side, id){
+  const m = faceAt(side);
+  const h = handAt(side);
+  const foe = foeHandsAt(side);
+  const sign = side==='player' ? 1 : -1;
+
+  if(id==='beer'){
+    const can = fxFly('🥤', h.x, h.y, 30, -12);
+    await sleep(300);
+    fxMove(can, m.x-6, m.y-10, -28);                 // 罐底朝天，对着嘴
+    await sleep(240);
+    for(let i=0;i<2;i++){                            // 仰头灌两口
+      fxMove(can, m.x-6, m.y-16, -36, 1.04); await sleep(160);
+      fxMove(can, m.x-4, m.y-4, -22, 1); await sleep(150);
+    }
+    const bub=document.createElement('span');        // 罐口气泡
+    bub.className='fx'; bub.textContent='🫧'; bub.style.fontSize='20px'; bub.style.opacity='1';
+    bub.style.transform=`translate(${m.x+6}px,${m.y-24}px)`;
+    $('stageFx').appendChild(bub);
+    setTimeout(()=>bub.remove(), 600);
+    can.style.opacity='0'; setTimeout(()=>can.remove(), 300);
+  }
+
+  else if(id==='saw'){
+    const saw = fxFly('🪚', h.x, h.y, 30, 0);
+    await sleep(300);
+    fxMove(saw, -34, 2, 78);                         // 贴到枪管上
+    await sleep(220);
+    for(let i=0;i<5;i++){                            // 来回锯
+      fxMove(saw, -20, 2, 74); await sleep(130);
+      fxMove(saw, -48, 2, 82); await sleep(130);
+      const f=$('flash'); if(f){ f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
+    }
+    $('gun').classList.add('sawed');                 // 枪管真的变短
+    fxMove(saw, h.x, h.y, 0); await sleep(260);
+    saw.style.opacity='0'; setTimeout(()=>saw.remove(), 260);
+  }
+
+  else if(id==='glass'){
+    const mag = fxFly('🔍', h.x, h.y, 28, 0);
+    await sleep(280);
+    fxMove(mag, -52, 0, -16);                        // 怼到枪口
+    const rig=$('rig'); if(rig) rig.style.transform += ' scale(1.16)';
+    await sleep(420);
+    const shell = S.revealed==='live' ? '🔴' : '⚪';
+    const badge=document.createElement('span');
+    badge.className='fx'; badge.textContent=shell; badge.style.fontSize='26px'; badge.style.opacity='1';
+    badge.style.transform='translate(34px,-22px)';
+    $('stageFx').appendChild(badge);
+    await sleep(620);
+    badge.remove();
+    if(rig) rig.style.transform = $('rig').style.transform.replace(' scale(1.16)','');
+    fxMove(mag, h.x, h.y, 0);
+    await sleep(240); mag.style.opacity='0'; setTimeout(()=>mag.remove(), 240);
+  }
+
+  else if(id==='cuff'){
+    const foeSide = side==='player' ? 'dealer' : 'player';
+    const cuff = fxFly('🔗', h.x, h.y, 26, 0);
+    await sleep(320);
+    fxMove(cuff, foe.x, foe.y, 0, 1.4);
+    handsOf(foeSide).forEach(hid=>{ const el=$(hid); if(el) el.classList.add('cuffed'); });
+    // 两腕之间拉出铐链，能看见“人被扣在桌上”
+    const hl = relTo($(foeSide==='dealer'?'dealerHandL':'playerHandL'));
+    const hr = relTo($(foeSide==='dealer'?'dealerHandR':'playerHandR'));
+    const links=[];
+    [0,.10,.90,1].forEach((t,i)=>{
+      const link=document.createElement('span');
+      link.className='fx'; link.textContent='🔗'; link.style.fontSize='14px';
+      link.style.opacity='0'; link.style.transition='opacity .16s';
+      link.style.transform=`translate(${hl.x+(hr.x-hl.x)*t}px,${hl.y}px) rotate(90deg)`;
+      $('stageFx').appendChild(link); links.push(link);
+      setTimeout(()=>{ link.style.opacity='1'; }, 90+i*55);
+    });
+    await sleep(700);
+    cuff.style.opacity='0'; setTimeout(()=>cuff.remove(), 300);
+    await sleep(420);
+    links.forEach(l=>{ l.style.opacity='0'; setTimeout(()=>l.remove(),200); });
+  }
+
+  else if(id==='cig'){
+    const cig = fxFly('🚬', h.x, h.y, 26, 0);
+    await sleep(300);
+    fxMove(cig, m.x+16, m.y-6, 22);
+    const fire=document.createElement('span');
+    fire.className='fx'; fire.textContent='🔥'; fire.style.fontSize='14px'; fire.style.opacity='1';
+    fire.style.transform=`translate(${m.x+26}px,${m.y-22}px)`;
+    $('stageFx').appendChild(fire);
+    await sleep(600);
+    fire.remove(); fxMove(cig, h.x, h.y, 0); await sleep(200);
+    cig.style.opacity='0'; setTimeout(()=>cig.remove(), 240);
+  }
+
+  else if(id==='pills'){
+    const pill = fxFly('💊', h.x, h.y, 26, 0);
+    await sleep(320);
+    fxMove(pill, m.x+10, m.y-4, 12, .8);
+    await sleep(260);
+    fxMove(pill, m.x+10, m.y+4, 12, .3);              // 吞下去
+    await sleep(260); pill.remove();
+  }
+
+  else if(id==='inverter'){
+    const inv = fxFly('🔁', h.x, h.y, 26, 0);
+    await sleep(300);
+    fxMove(inv, -48, -10, 0);
+    await sleep(120);
+    inv.style.transform='translate(-48px,-10px) rotate(360deg) scale(1.12)';
+    await sleep(380);
+    inv.style.transform='translate(-48px,-10px) rotate(720deg) scale(1)';
+    await sleep(380);
+    inv.style.opacity='0'; setTimeout(()=>inv.remove(), 260);
+  }
+
+  else if(id==='phone'){
+    const ph = fxFly('📱', h.x, h.y, 30, 0);
+    await sleep(300);
+    fxMove(ph, -64, sign>0 ? 56 : -66, -8);
+    await sleep(900);
+    ph.style.opacity='0'; setTimeout(()=>ph.remove(), 260);
+  }
+
+  else if(id==='adr'){
+    const needle = fxFly('💉', h.x, h.y, 26, -20);
+    await sleep(300);
+    fxMove(needle, (side==='player'?-108:-72), (side==='player'?150:-130), 70);
+    const arm=document.createElement('span');
+    arm.className='fx'; arm.textContent='🦾'; arm.style.fontSize='26px'; arm.style.opacity='1';
+    arm.style.transform=`translate(${side==='player'?-118:-82}px,${side==='player'?162:-142}px)`;
+    $('stageFx').appendChild(arm);
+    await sleep(420);
+    arm.remove(); needle.style.opacity='0'; setTimeout(()=>needle.remove(), 240);
+    const grab = fxFly('🤚', (side==='player'?-70:-70), (side==='player'?120:-110), 28, 0);
+    await sleep(200);
+    fxMove(grab, 26, foe.y, 0);                       // 伸到对面桌上抓
+    await sleep(520);
+    grab.style.opacity='0'; setTimeout(()=>grab.remove(), 240);
+  }
+}
+
+/* ================= 庄家 AI（只看桌面公开信息） ================= */
+let dealerQueued = false, busyAt = 0;
+function scheduleDealer(ms){
+  if(dealerQueued) return;
+  dealerQueued = true;
+  setTimeout(()=>{ dealerQueued = false; dealerAct(); }, ms || 600);
+}
+
+async function dealerAct(){
+  if(S.over || S.transition || S.turn!=='dealer' || S.busy) return;
+  const d = S.dealer, c = cfg();
+  await sleep(650);
+  if(S.over || S.transition || S.turn!=='dealer' || S.busy) return;
+
+  const live = S.chamber.filter(x=>x==='live').length;
+  const blank = S.chamber.length - live;
+
+  // 道具决策：命中条件才尝试，失败就继续往下走，绝不在此空转
+  let used = false;
+  if(d.items.includes('adr') && S.player.items.some(x=>x!=='adr') && Math.random()<0.35){
+    used = useItem('dealer','adr');
+  }else if(d.items.includes('phone') && S.chamber.length>=3 && Math.random()<0.4){
+    used = useItem('dealer','phone');
+  }else if(d.items.includes('pills') && d.hp <= c.hp-2 && Math.random()<0.45){
+    used = useItem('dealer','pills');
+  }else if(d.items.includes('inverter') && S.revealed==='live' && Math.random()<0.5){
+    used = useItem('dealer','inverter');
+  }else if(d.items.includes('cig') && d.hp < c.hp && !S.sudden.dealer){
+    used = useItem('dealer','cig');
+  }else if(d.items.includes('glass') && !S.revealed && Math.random()<0.55){
+    used = useItem('dealer','glass');
+  }else if(d.items.includes('saw') && !S.sawn && live>=2 && !S.sudden.dealer){
+    used = useItem('dealer','saw');
+  }else if(d.items.includes('cuff') && Math.random()<0.3){
+    used = useItem('dealer','cuff');
+  }else if(d.items.includes('beer') && live>=3 && Math.random()<0.5){
+    used = useItem('dealer','beer');
+  }
+
+  if(S.over || S.transition) return;              // 吃药把自己吃死了就别再开枪
+  if(used){ scheduleDealer(600); return; }
+
+  const target = blank > live ? 'self' : 'opponent';
+  const fired = await performShot('dealer', target);
+  if(!fired){ scheduleDealer(500); return; }
+
+  // 空弹打自己 → 还是庄家的回合，继续
+  if(!S.over && !S.transition && S.turn==='dealer' && !S.busy) scheduleDealer(600);
+}
+
+/* ================= 看门狗：卡住自动复位 ================= */
+setInterval(()=>{
+  if(typeof S==='undefined' || !S || S.over) return;
+  if(S.busy){
+    if(Date.now() - busyAt > 5000){
+      S.busy = false; S.transition = false; busyAt = 0;
+      resetHands(); render();
+      log('⚠️ 动作超时，已自动复位继续');
+      if(S.turn==='dealer') scheduleDealer(700);
+    }
+    return;
+  }
+  if(S.transition) return;
+  if(S.turn==='dealer') scheduleDealer(900);
+}, 1100);
+
+/* ================= 死亡 / 回合推进 ================= */
+function death(side){
+  S.transition = true;
+  $(side==='player'?'playerFace':'dealerFace').classList.add('fallen');
+
+  if(S.stage === STAGES.length - 1){
+    setTimeout(()=>finish(side==='dealer'), 900);
+    return;
+  }
+  if(side === 'dealer'){
+    log('😈 庄家倒下了');
+    setTimeout(()=>{ S.stage++; nextRound(); }, 1100);
+  }else{
+    log('💀 你被打空了电量 —— 除颤器把你拉回来，本回合重来');
+    setTimeout(()=>restartRound(), 1100);
+  }
+}
+
+function clearFaces(){
+  ['playerFace','dealerFace'].forEach(id=>$(id).classList.remove('fallen','hurt','recoil'));
+}
+
+function nextRound(){
+  const c = cfg();
+  S.transition = false; S.over = false;
+  S.player.hp = c.hp; S.dealer.hp = c.hp;
+  S.player.items = []; S.dealer.items = [];
+  S.player.locked = false; S.dealer.locked = false;
+  S.sudden = {player:false, dealer:false};
+  S.turn = 'player'; S.sawn = false; S.revealed = null;
+  clearFaces();
+  resetHands();
+  reload();
+  render();
+  playRoundIntro('new');
+  const rl = ['第二轮。道具上桌，敢用就用。','最后一把。这次没有除颤器给你兜底。'];
+  setTimeout(()=>say('dealer', rl[Math.max(0,S.stage-1)]), 900);
+}
+
+function restartRound(){
+  const c = cfg();
+  S.transition = false;
+  S.player.hp = c.hp; S.dealer.hp = c.hp;
+  S.player.items = []; S.dealer.items = [];
+  S.player.locked = false; S.dealer.locked = false;
+  S.sudden = {player:false, dealer:false};
+  S.turn = 'player'; S.sawn = false; S.revealed = null;
+  clearFaces();
+  resetHands();
+  reload();
+  render();
+  playRoundIntro('revive');
+}
+
+function finish(win){
+  S.over = true; S.transition = false;
+  const c = cfg();
+  if(win){
+    const took = Math.max(1, Math.round((Date.now()-STARTAT)/1000));
+    const gain = BONUS ? Math.max(2000, CASH*2) : scoreMoney();
+    CASH = gain;
+    showMoney();
+    recordBest(gain);
+    say('dealer', LINES.win[0]);
+    // 镜头：桌子清场，庄家把箱子推过来
+    camIn(true);
+    $('rig').style.visibility='hidden';
+    allHands(el=>el.style.opacity='0');
+    ['dealerSlots','playerSlots'].forEach(id=>{ const w=$(id); if(w) w.style.opacity='0'; });
+    const box = fxAdd('payout','🧳');
+    box.style.transform='translate(0px,-58px) scale(1.15)';
+    cashBurst();
+    const tag=document.createElement('span');
+    tag.className='fx'; tag.textContent=money();
+    tag.style.fontSize='15px'; tag.style.opacity='1'; tag.style.color='#ffd35c';
+    tag.style.letterSpacing='1px'; tag.style.fontWeight='700';
+    tag.style.background='rgba(10,8,4,.78)';
+    tag.style.border='1px solid rgba(255,200,110,.5)';
+    tag.style.borderRadius='7px'; tag.style.padding='2px 8px';
+    tag.style.transform='translate(0px,-104px)';
+    if($('stageFx')) $('stageFx').appendChild(tag);
+    setTimeout(()=>{
+      camIn(false);
+      showEndBar('win');
+      render();
+    }, 1200);
+  }else{
+    if(BONUS){ CASH = 0; showMoney(); }
+    say('dealer', LINES.lose[0]);
+    setTimeout(()=>{
+      showEndBar('lose');
+      render();
+    }, 900);
+  }
+}
+
+function startBonus(){
+  BONUS = true; RUN++;
+  BSTAGES = makeBonusStages();
+  newGame();
+  // 镜头：桌上立起加倍摇杆，然后四件新道具落桌
+  camIn(true);
+  fxAdd('lever','🕹️');
+  ['💉','📱','💊','🔁'].forEach((e,i)=>{
+    const sp=document.createElement('span');
+    sp.className='fx';
+    sp.textContent=e;
+    sp.style.fontSize='26px';
+    sp.style.opacity='1';
+    sp.style.transition='transform .4s cubic-bezier(.3,.9,.4,1.2), opacity .3s';
+    sp.style.transform=`translate(${(i-1.5)*46}px,-150px)`;
+    $('stageFx').appendChild(sp);
+    setTimeout(()=>{ sp.style.transform=`translate(${(i-1.5)*46}px,-58px)`; }, 160+i*80);
+  });
+  setTimeout(()=>{ camIn(false); fxClear(); }, 1800);
+}
+
+function leaveWithCash(){
+  const got = money();
+  recordBest(got);
+  camIn(true);
+  fxAdd('gone','🧳');
+  setTimeout(()=>{
+    camIn(false);
+    showEndBar('gone');
+    say('dealer', '庄家还坐在桌后，没有起身。');
+  }, 1100);
+}
+
+/* ================= 镜头与舞台演出 ================= */
+let capTimer = 0;
+/* 不再在桌面上贴文字通知：信息靠画面、道具和对白 */
+
+function fxClear(){ const f=$('stageFx'); if(f) f.innerHTML=''; }
+function fxAdd(cls, emo, vars){
+  const sp=document.createElement('span');
+  sp.className='fx '+cls;
+  sp.textContent=emo;
+  if(vars) for(const k in vars) sp.style.setProperty(k, vars[k]);
+  $('stageFx').appendChild(sp);
+  return sp;
+}
+function cashBurst(){
+  [[-46,'.12s'],[6,'.24s'],[48,'.36s']].forEach(([dx,dl])=>{
+    fxAdd('cash','💵',{'--dx':dx+'px','--dl':dl});
+  });
+}
+function cap(){/* 已废弃：不再用文字通知 */}
+
+function camIn(on){ const r=$('room'); if(r) r.classList.toggle('cam-in', !!on); }
+function whiteFlash(){ const w=$('whiteOut'); if(!w) return; w.classList.remove('on'); void w.offsetWidth; w.classList.add('on'); }
+
+/* 回合开场：不是弹窗，是镜头 */
+function playRoundIntro(kind){
+  S.transition = true; render();
+  fxClear();
+  camIn(true);
+  const c = cfg();
+  if(kind === 'revive'){
+    whiteFlash();
+    fxAdd('shockA','⚡'); fxAdd('shockB','⚡');
+    const f=$('playerFace');
+    if(f){ f.classList.add('hurt'); setTimeout(()=>f.classList.remove('hurt'), 620); }
+  }else{
+    fxAdd('dice','🎲');
+    const f=$('dealerFace');
+    if(f){ f.classList.add('recoil'); setTimeout(()=>f.classList.remove('recoil'), 420); }
+  }
+  setTimeout(()=>{
+    camIn(false);
+    fxClear();
+    S.transition = false; S.busy = false;
+    render();
+  }, 1450);
+}
+
+/* 结算选项不弹窗，直接摆到按钮区 */
+function showEndBar(mode){
+  const bar=$('endBar'), row=$('row2');
+  if(!bar) return;
+  row.style.display='none';
+  bar.style.display='grid';
+  bar.classList.toggle('one', mode!=='win');
+  if(mode==='win'){
+    $('btnBonus').style.display='block';
+    $('btnBonus').textContent='🔁 加倍再赌';
+    $('btnBonus').onclick=()=>{ hideEndBar(); startBonus(); };
+    $('btnCash').textContent=`💰 走人 ${money()}`;
+    $('btnCash').onclick=()=>{ hideEndBar(); leaveWithCash(); };
+  }else if(mode==='lose'){
+    $('btnBonus').style.display='none';
+    $('btnCash').textContent='🚪 重新入座';
+    $('btnCash').onclick=()=>{ hideEndBar(); backToHall(); };
+  }else{
+    $('btnBonus').style.display='none';
+    $('btnCash').textContent='🚪 出门回家';
+    $('btnCash').onclick=()=>{ hideEndBar(); backToHall(); };
+  }
+}
+function hideEndBar(){
+  ['dealerSlots','playerSlots'].forEach(id=>{ const w=$(id); if(w) w.style.opacity=''; });
+  const bar=$('endBar'), row=$('row2');
+  if(bar) bar.style.display='none';
+  if(row) row.style.display='grid';
+}
+
+/* 回到走廊重来 */
+function backToHall(){
+  LASTTAKE = CASH;
+  BONUS = false; RUN = 0; BSTAGES = null; CASH = 0;
+  showMoney();
+  walkStep = 0;
+  $('walker').classList.remove('at-door');
+  $('intro').classList.remove('hide','kicked');
+  $('contract').classList.remove('show','gone');
+  $('hallHint').textContent = '楼道尽头就是那间赌厅';
+  $('btnHall').textContent = '🚶 走向大门';
+  $('arena').style.display = 'none';
+  $('arena').classList.remove('enter');
+  newGame();
+  showHome();
+}
+
+/* ================= 开局 ================= */
+function newGame(){
+  S = newState();
+  EVENTS.length = 0;
+  fxClear(); hideEndBar(); camIn(false);
+  if($('rig')) $('rig').style.opacity='1';
+  allHands(el=>el.style.opacity='1');
+  clearFaces();
+  resetHands();
+  hush();
+  STARTAT = Date.now();
+  reload();
+  render();
+  showMoney();
+  setTimeout(()=>say('dealer', pick(LINES.open)), 420);
+}
+
+$('btnReset').onclick = ()=>backToHall();
+$('btnRules').onclick = ()=>$('rulesBox').classList.add('show');
+$('btnRulesClose').onclick = ()=>$('rulesBox').classList.remove('show');
+$('btnSelf').onclick = async ()=>{
+  const fired = await performShot('player','self');
+  if(fired && !S.over && !S.transition && S.turn==='dealer' && !S.busy) scheduleDealer(800);
+};
+$('btnOpp').onclick = async ()=>{
+  const fired = await performShot('player','opponent');
+  if(fired && !S.over && !S.transition && S.turn==='dealer' && !S.busy) scheduleDealer(800);
+};
+
+/* ================= 生死状 ================= */
+let signed = false;
+function enterTable(){
+  $('contract').classList.remove('show');
+  setTimeout(()=>$('contract').classList.remove('gone'), 60);
+  $('arena').style.display = 'flex';
+  requestAnimationFrame(()=>$('arena').classList.add('enter'));
+  newGame();
+  refit();
+}
+$('btnSign').onclick = ()=>{
+  if(signed){ enterTable(); return; }
+  NAME = String($('nameInput').value || '').trim().slice(0, 8) || '无名氏';
+  signed = true;
+  $('stamp').textContent = NAME;
+  $('stamp').classList.add('on');
+  $('btnSign').textContent = '✍️ 签好了 · 入座';
+  setTimeout(enterTable, 950);
+};
+
+/* ================= 视口兜底 ================= */
+let fitRaf = 0;
+function fitArena(){
+  const ar=$('arena'); if(!ar || ar.style.display==='none') return;
+  ar.style.zoom = '1';
+  const h = ar.offsetHeight;
+  const avail = (document.documentElement.clientHeight||0) - 4;
+  if(h > avail + 1 && h > 0){
+    ar.style.zoom = String(Math.max(.55, avail/h));
+  }
+}
+function refit(){
+  cancelAnimationFrame(fitRaf);
+  fitRaf = requestAnimationFrame(()=>{ fitArena(); setTimeout(fitArena, 320); });
+}
+if(typeof window!=='undefined' && window.addEventListener){
+  window.addEventListener('resize', refit);
+  window.addEventListener('orientationchange', refit);
+}
+
+/* ================= 主页 ================= */
+function bestMoney(){
+  let b=0; try{ b=+(localStorage.getItem('bs_best')||0)||0; }catch(e){ b=0; }
+  return b;
+}
+function recordBest(v){
+  if(!(v>0)) return;
+  try{ if(v>bestMoney()) localStorage.setItem('bs_best', String(v)); }catch(e){}
+  renderHome();
+}
+function renderHome(){
+  const b=$('bestCash'); if(b) b.textContent='$'+bestMoney().toLocaleString('en-US');
+}
+let LASTTAKE = 0;
+function showHome(){
+  const h=$('home'); if(!h) return;
+  renderHome();
+  $('homeLast').textContent = LASTTAKE>0 ? '上次带走 $'+LASTTAKE.toLocaleString('en-US') : '';
+  h.style.display='flex';
+  requestAnimationFrame(()=>h.classList.remove('gone'));
+}
+function hideHome(){
+  const h=$('home'); if(!h) return;
+  h.classList.add('gone');
+  setTimeout(()=>{ h.style.display='none'; }, 520);
+}
+function enterHall(){
+  walkStep = 0;
+  $('intro').classList.remove('hide','kicked');
+  $('walker').classList.remove('at-door');
+  $('hallHint').textContent = '楼道尽头就是那间赌厅';
+  $('btnHall').textContent = '🚶 走向大门';
+  hideHome();
+}
+$('btnHomeStart').onclick = ()=>enterHall();
+$('btnHomeRules').onclick = ()=>$('rulesBox').classList.add('show');
+
+/* ================= 走廊走位 ================= */
+let walkStep = 0;
+$('btnHall').onclick = ()=>{
+  if(walkStep===0){
+    $('walker').classList.add('at-door');
+    $('hallHint').textContent = '你走到了门边';
+    $('btnHall').textContent = '👢 踹门';
+    walkStep = 1;
+  }else if(walkStep===1){
+    $('intro').classList.add('kicked');
+    $('hallHint').textContent = '门开了';
+    walkStep = 2;
+    setTimeout(()=>{
+      $('intro').classList.add('hide');
+      $('contract').classList.add('show');       // 踹开门，先看见桌上的生死状
+      $('contract').classList.remove('gone');
+    }, 850);
+  }
+};
+</script>
+</body>
+</html>
