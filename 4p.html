@@ -62,44 +62,92 @@ button:disabled{opacity:.45;pointer-events:none}
 .ghead{width:100%;display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);padding:0 2px;flex:none;min-height:30px}
 .ghead .sp{flex:1}
 .ghead button{padding:6px 10px;font-size:12px;border-radius:8px}
-.table{position:relative;flex:none;width:min(720px,95vw);height:min(70vh,504px);
-  background:radial-gradient(ellipse at 50% 45%,var(--felt),var(--felt2) 70%,#0e3625);
-  border:7px solid #4a3122;border-radius:22px;
-  box-shadow:0 0 0 3px #2a1a12,0 18px 40px #000a,inset 0 0 60px #0006}
-.table:after{content:'';position:absolute;inset:0;border-radius:16px;pointer-events:none;
-  background:repeating-linear-gradient(90deg,#fff0 0 39px,#fff1 39px 40px),
-             repeating-linear-gradient(0deg,#fff0 0 39px,#fff1 39px 40px);opacity:.12}
-.gunpos{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;z-index:3}
-.gunpos .g{font-size:clamp(26px,7vmin,42px);filter:drop-shadow(0 5px 10px #000a)}
-.gunpos .cnt{font-size:11px;color:#dfe8d9;background:#0008;padding:2px 8px;border-radius:20px;margin-top:2px}
+/* ===== 赌桌：沿用单人版美术 ===== */
+.gWrap{position:relative;flex:none;box-sizing:border-box;width:min(780px,96vw);padding:clamp(34px,5.2vh,54px) 44px clamp(58px,10.5vh,92px);display:flex;justify-content:center}
+#felt{position:relative;width:100%;height:clamp(210px,56vh,330px);border-radius:14px;border:7px solid #4a3122;
+  box-shadow:inset 0 0 40px #0008,0 8px 22px #0008,0 0 0 3px #2a1a12;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 62px,#ffffff1a 62px 63px),
+    repeating-linear-gradient(90deg,transparent 0 74px,#ffffff1a 74px 75px),
+    radial-gradient(120% 100% at 50% 50%,#357f59 0%,#245c40 60%,#17392a 100%);
+  overflow:visible}
+.zone{position:absolute;background:#ffffff29;pointer-events:none;z-index:2}
+.zone.v{top:9px;bottom:9px;width:1px}
+.zone.h{left:9px;right:9px;height:1px}
+.zone.v.a{left:27%} .zone.v.b{left:73%} .zone.h.c{top:52%}
 
-.seatp{position:absolute;z-index:2;display:flex;flex-direction:column;align-items:center;gap:3px;
-  transition:.2s}
-.s-bot{left:50%;bottom:2%;transform:translateX(-50%)}
-.s-top{left:50%;top:2%;transform:translateX(-50%)}
-.s-left{left:1.5%;top:50%;transform:translateY(-50%)}
-.s-right{right:1.5%;top:50%;transform:translateY(-50%)}
-.face{font-size:clamp(26px,7vmin,40px);line-height:1;transition:.2s;filter:drop-shadow(0 4px 8px #000a)}
-.seatp.turn .face{transform:scale(1.14);filter:drop-shadow(0 0 14px #ffd85e)}
-.seatp.dead .face{filter:grayscale(1) brightness(.5);transform:rotate(28deg) scale(.9)}
-.nm{font-size:calc(clamp(9px,1.9vmin,12px));color:#dfe6d8;background:#0009;padding:1px 7px;border-radius:20px;
-  max-width:78px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hpb{display:flex;gap:2px;font-size:clamp(8px,1.7vmin,11px)}
-.slots{display:flex;gap:2px}
-.slots i{width:calc(clamp(8px,1.8vmin,12px));height:calc(clamp(8px,1.8vmin,12px));border-radius:3px;
-  background:#fbfbfb22;border:1px solid #ffffff22;display:inline-block}
-.hh{position:absolute;font-size:clamp(15px,4vmin,22px);line-height:1;opacity:.95;z-index:-1}
-.s-bot .hh{left:50%;top:-1.35em;transform:translateX(-50%)}
-.s-top .hh{left:50%;bottom:-1.35em;transform:translateX(-50%) rotate(180deg)}
-.s-left .hh{right:-1.1em;top:34%;transform:translateY(-50%) rotate(90deg)}
-.s-right .hh{left:-1.1em;top:34%;transform:translateY(-50%) rotate(-90deg)}
-@media (max-width:520px){
-  .table{width:95vw;height:min(70svh,102vw)}
-  .s-left{left:1%;top:47%} .s-right{right:1%;top:47%}
-  .s-top{top:1.5%} .s-bot{bottom:1.5%}
-  .nm{font-size:10px;max-width:66px}
-}
-.badges{display:flex;gap:2px;font-size:clamp(8px,1.7vmin,11px);min-height:11px}
+/* 人脸 */
+.facebox{position:absolute;display:flex;flex-direction:column;align-items:center;gap:2px;z-index:9}
+#fbBot{left:50%;bottom:-48px;transform:translateX(-50%)}
+#fbTop{left:50%;top:-26px;transform:translateX(-50%)}
+#fbLeft{left:-28px;top:47%;transform:translateY(-50%)}
+#fbRight{right:-28px;top:47%;transform:translateY(-50%)}
+.face{font-size:clamp(30px,7.5vmin,44px);line-height:1;filter:drop-shadow(0 4px 8px #0009);transition:transform .2s}
+.facebox.turn .face{transform:scale(1.12);filter:drop-shadow(0 0 14px #ffd85e)}
+.facebox.dead .face{filter:grayscale(1) brightness(.55);transform:rotate(24deg) scale(.92)}
+.face.hurt{animation:faceHurt .38s}
+.face.recoil{animation:faceRecoil .3s}
+@keyframes faceRecoil{0%{transform:none}35%{transform:translateY(8px) rotate(6deg)}100%{transform:none}}
+@keyframes faceHurt{0%,100%{transform:none}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.fmeta{display:flex;flex-direction:column;align-items:center;gap:1px}
+.nm{font-size:10px;color:#efe6d4;background:#0009;padding:1px 7px;border-radius:20px;
+  max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hpb{display:flex;gap:2px}
+.hpb i{width:9px;height:9px;border-radius:2px;background:#ff5a4d;box-shadow:0 0 6px #ff5a4d55}
+.hpb i.off{background:#ffffff1f;box-shadow:none}
+.idots{display:flex;gap:2px;min-height:7px}
+.idots i{width:7px;height:7px;border-radius:2px;background:#ffffff22;border:1px solid #ffffff1f}
+.idots i.on{background:#ffd35c;border-color:#ffd35c;box-shadow:0 0 5px #ffd35c55}
+
+/* 手 */
+.idleHand{position:absolute;font-size:clamp(34px,7vmin,44px);z-index:6;opacity:.95;
+  transition:left .34s ease,top .34s ease,transform .34s ease,opacity .16s}
+#hPL{left:13%;bottom:12px;transform:translate(-50%,0) rotate(-10deg)}
+#hPR{left:87%;bottom:12px;transform:translate(-50%,0) rotate(10deg)}
+#hTL{left:13%;top:12px;transform:translate(-50%,0) rotate(189deg)}
+#hTR{left:87%;top:12px;transform:translate(-50%,0) rotate(171deg)}
+#hL{left:8px;top:46%;transform:translate(0,-50%) rotate(96deg)}
+#hR{right:8px;top:46%;transform:translate(0,-50%) rotate(-96deg)}
+
+/* 枪 + 两只握枪手 */
+#rig{position:absolute;left:50%;top:47%;width:76px;height:76px;margin:-38px 0 0 -38px;z-index:8;
+  transition:transform .34s cubic-bezier(.3,.9,.35,1.15)}
+#gun{position:absolute;left:2px;top:14px;font-size:clamp(38px,8.6vmin,54px);line-height:1;
+  filter:drop-shadow(0 5px 8px #0009)}
+#rigHand{position:absolute;left:42px;top:32px;font-size:22px;opacity:0;
+  transform:scale(.6) rotate(-10deg);transition:opacity .15s,transform .15s}
+#rigHand.on{opacity:1;transform:scale(1) rotate(-10deg)}
+#rigHand2{position:absolute;left:56px;top:28px;font-size:20px;opacity:0;
+  transform:scale(.6) rotate(10deg) scaleX(-1);transition:opacity .15s,transform .15s}
+#rigHand2.on{opacity:1;transform:scale(1) rotate(10deg) scaleX(-1)}
+#flash{position:absolute;left:-38px;top:10px;font-size:32px;opacity:0}
+#flash.on{animation:flashPop .34s ease-out}
+@keyframes flashPop{0%{opacity:0;transform:scale(.3)}35%{opacity:1;transform:scale(1.5)}100%{opacity:0;transform:scale(1)}}
+
+/* 瞄准线 */
+#aim{position:absolute;display:none;z-index:7;border-radius:2px}
+#aim.up{display:block;left:50%;transform:translateX(-50%);top:6px;height:calc(47% - 12px);width:3px;
+  background:linear-gradient(0deg,#ff5a4600,#ff5a46dd)}
+#aim.down{display:block;left:50%;transform:translateX(-50%);bottom:6px;height:calc(47% - 12px);width:3px;
+  background:linear-gradient(180deg,#ff5a4600,#ff5a46dd)}
+#aim.left{display:block;top:47%;transform:translateY(-50%);left:6px;width:calc(47% - 12px);height:3px;
+  background:linear-gradient(90deg,#ff5a4600,#ff5a46dd)}
+#aim.right{display:block;top:47%;transform:translateY(-50%);right:6px;width:calc(47% - 12px);height:3px;
+  background:linear-gradient(270deg,#ff5a4600,#ff5a46dd)}
+
+/* 弹仓 */
+#shells{position:absolute;left:50%;top:72%;transform:translateX(-50%);z-index:5;display:flex;gap:5px;align-items:center}
+.sh{width:19px;height:10px;border-radius:4px;background:linear-gradient(90deg,#9a9a9a,#5f5f5f);
+  box-shadow:inset 0 -3px 0 #0006,0 2px 3px #0006}
+.sh.drop{animation:shDrop .26s backwards}
+@keyframes shDrop{0%{opacity:0;transform:translateY(-14px) scaleX(.4)}60%{opacity:1;transform:translateY(2px) scaleX(1.08)}100%{transform:translateY(0)}}
+.cnum{font-size:10px;color:#dfe8d9;background:#0009;padding:1px 7px;border-radius:20px;margin-left:4px;white-space:nowrap}
+
+/* 我的道具格 */
+#mySlots{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);display:flex;gap:5px;flex-wrap:wrap;
+  justify-content:center;width:180px;z-index:5}
+#mySlots i{width:16px;height:16px;border-radius:4px;background:#ffffff1c;border:1px solid #ffffff24;display:block}
+#mySlots i.on{background:#ffd35c33;border-color:#ffd35c88;font-size:10px;line-height:14px;text-align:center;font-style:normal}
 
 /* 底部操作 */
 .bar{width:100%;display:flex;gap:7px;flex-wrap:wrap;justify-content:center;padding-top:2px;flex:none}
@@ -170,8 +218,29 @@ button:disabled{opacity:.45;pointer-events:none}
     <span id="gPhase"></span><span id="gRound"></span>
     <button id="btnLog">聊</button>
   </div>
-  <div class="table" id="table">
-    <div class="gunpos"><div class="g">🔫</div><div class="cnt" id="gCount">—</div></div>
+  <div class="gWrap" id="gWrap">
+    <div id="felt">
+      <div class="zone v a"></div><div class="zone v b"></div><div class="zone h c"></div>
+      <div id="shells"></div>
+      <div id="aim"></div>
+      <div id="rig">
+        <span id="gun">🔫</span>
+        <span id="rigHand">✊</span>
+        <span id="rigHand2">✊</span>
+        <span id="flash">✨</span>
+      </div>
+      <span class="idleHand" id="hPL">🤚</span>
+      <span class="idleHand" id="hPR">🤚</span>
+      <span class="idleHand" id="hTL">🤚</span>
+      <span class="idleHand" id="hTR">🤚</span>
+      <span class="idleHand" id="hL">🤚</span>
+      <span class="idleHand" id="hR">🤚</span>
+      <div id="mySlots"></div>
+      <div class="facebox" id="fbBot"><div class="face">🙂</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
+      <div class="facebox" id="fbTop"><div class="face">😈</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
+      <div class="facebox" id="fbLeft"><div class="face">😡</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
+      <div class="facebox" id="fbRight"><div class="face">🤖</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
+    </div>
   </div>
   <div class="bar" id="gBar"></div>
   <div class="hand" id="gHand"></div>
@@ -860,6 +929,7 @@ function pushAll(){
   for (const k of keys) {
     let g = null;
     if (engine) g = lobby.seats.some(s => s.key === k) ? engine.view(k) : engine.spectatorView();
+    if (g && engine) g = { ...g, ev: engine.events.slice(-5) };
     mq.publish(vT(k), JSON.stringify({ ...payloadBase, view: g }), true);
   }
   if (!keys.includes(ME.key)) mq.publish(vT(ME.key), JSON.stringify({ ...payloadBase, view: null }), true);
@@ -986,57 +1056,112 @@ function renderLogs(){
 }
 
 const POS = ['s-bot','s-left','s-top','s-right'];
-function renderGame(){
-  if (!view || !view.seats) return;
-  show('game');
-  const meIdx0 = view.seats.findIndex(s => s.id === ME.key);
-  const meIdx = meIdx0 < 0 ? 0 : meIdx0;   // 观战者不在座位里，从 0 号位排
-  $('gRoom').textContent = '房 ' + ROOM;
-  $('gPhase').textContent = (view.phaseLabel || '') ;
-  $('gRound').textContent = '第 ' + (view.round || 1) + ' 轮';
-  $('gCount').textContent = view.counts ? `剩 ${view.counts.remaining} 发` : '—';
+let LAST = { seq: null };
+const POSMAP = { 4: ['bot','left','top','right'], 3: ['bot','left','right'], 2: ['bot','top'] };
+const DIRS = {
+  bot:   { dx: 0,   dy: 26,  deg: -90, aim: 'down'  },
+  top:   { dx: 0,   dy: -8,  deg: 90,  aim: 'up'    },
+  left:  { dx: -46, dy: 0,   deg: 180, aim: 'left'  },
+  right: { dx: 46,  dy: 0,   deg: 0,   aim: 'right' },
+};
+const CAP = { bot: 'Bot', top: 'Top', left: 'Left', right: 'Right' };
 
-  // 座位
-  const table = $('table');
-  table.querySelectorAll('.seatp').forEach(e => e.remove());
+function rigMove(dir, kick){
+  const r = $('rig'); if (!r) return;
+  const k = kick || 0;
+  const kx = dir.deg === 0 ? k : (dir.deg === 180 ? -k : 0);
+  const ky = dir.deg === 90 ? -k : (dir.deg === -90 ? k : 0);
+  r.style.transform = `translate(${dir.dx + kx}px, ${dir.dy + ky}px) rotate(${dir.deg}deg)`;
+}
+function flashFx(){
+  const f = $('flash'); if (!f) return;
+  f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+}
+function faceHurt(pos){
+  const box = $('fb' + CAP[pos]); if (!box) return;
+  const el = box.querySelector('.face'); if (!el) return;
+  el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
+}
+/* 举枪 → 开火 → 放下：单人版那一套，方向按座位来 */
+function playShot(pos, bleed){
+  const dir = DIRS[pos] || DIRS.top;
+  const aim = $('aim');
+  aim.className = dir.aim;
+  rigMove(dir, 0);
+  $('rigHand').classList.add('on'); $('rigHand2').classList.add('on');
+  setTimeout(() => { flashFx(); rigMove(dir, 9); if (bleed) faceHurt(pos); }, 300);
+  setTimeout(() => {
+    aim.className = '';
+    rigMove({ dx: 0, dy: 0, deg: 0 }, 0);
+    $('rigHand').classList.remove('on'); $('rigHand2').classList.remove('on');
+  }, 880);
+}
+
+function renderGame(){
+  if (!view) return;
+  const meIdx0 = view.seats.findIndex(s => s.id === ME.key);
+  const meIdx = meIdx0 < 0 ? 0 : meIdx0;          // 观战者不在座位里
   const n = view.seats.length;
-  const order = [];
-  for (let i = 0; i < n; i++) order.push(view.seats[(meIdx + i) % n]);
-  const posMap = n >= 4 ? POS : n === 3 ? ['s-bot','s-left','s-top'] : ['s-bot','s-top'];
-  order.forEach((s, i) => {
-    const isMe = s.id === ME.key;
-    const hp = '🟥'.repeat(Math.max(0, s.hp));
-    const slots = Array.from({length:8}, (_, k) => {
-      const it = s.items && s.items[k];
-      return it && it !== 'unknown'
-        ? `<i style="background:#ffe9b8;border-color:#e9b949"></i>`
-        : `<i></i>`;
-    }).join('');
-    const badges = [
-      s.sealed ? '🚫' : '', s.cuffed ? '🔗' : '', s.sawed ? '🪚' : '', s.transferArmed ? '🧷' : ''
-    ].filter(Boolean).join('');
-    const face = isMe ? (s.alive ? '🙂' : '💀') : (s.alive ? (s.ai ? '🤖' : ['😈','😡','😬','😑'][s.idx % 4]) : '💀');
-    table.insertAdjacentHTML('beforeend',
-      `<div class="seatp ${posMap[i]||'s-top'} ${view.turn===s.id?'turn':''} ${s.alive?'':'dead'}" data-key="${s.id}">
-         <div class="hh">${s.alive?'🤚':'🫱'}</div>
-         <div class="badges">${badges}</div>
-         <div class="face">${face}</div>
-         <div class="nm">${esc(s.name)}${isMe?' (你)':''}</div>
-         <div class="hpb">${s.alive ? hp : '💀'}</div>
-         <div class="slots">${slots}</div>
-       </div>`);
+  const maps = POSMAP[n] || POSMAP[4];
+  const assign = {};
+  for (let i = 0; i < n; i++) assign[maps[i]] = view.seats[(meIdx + i) % n];
+
+  /* ---- 四面的人 ---- */
+  ['bot', 'top', 'left', 'right'].forEach(p => {
+    const box = $('fb' + CAP[p]); if (!box) return;
+    const s = assign[p];
+    if (!s) { box.classList.add('hidden'); return; }
+    box.classList.remove('hidden');
+    const face = box.querySelector('.face');
+    face.textContent = s.alive ? (s.ai ? '🤖' : (s.id === ME.key ? '🙂' : '😈')) : '😵';
+    box.classList.toggle('turn', s.id === view.turn && !view.over);
+    box.classList.toggle('dead', !s.alive);
+    box.querySelector('.nm').textContent =
+      s.name + (s.id === ME.key ? '（你）' : '') + (s.sawed ? ' 🪚' : '') + (s.sealed ? ' 🚫' : '');
+    const hpb = box.querySelector('.hpb'); hpb.innerHTML = '';
+    for (let k = 0; k < (s.maxHp || 3); k++) {
+      hpb.insertAdjacentHTML('beforeend', `<i class="${k < s.hp ? '' : 'off'}"></i>`);
+    }
+    const dots = box.querySelector('.idots'); dots.innerHTML = '';
+    for (let k = 0; k < Math.min(8, (s.items || []).length); k++) dots.insertAdjacentHTML('beforeend', '<i class="on"></i>');
   });
 
-  // 底部动作
+  /* ---- 手：上下面各两只，两侧各一只 ---- */
+  const handOn = (id, on) => { const el = $(id); if (el) el.style.opacity = on ? '.95' : '0'; };
+  handOn('hPL', !!assign.bot); handOn('hPR', !!assign.bot);
+  handOn('hTL', !!assign.top); handOn('hTR', !!assign.top);
+  handOn('hL', !!assign.left); handOn('hR', !!assign.right);
+
+  /* ---- 弹仓 ---- */
+  const sc = $('shells'); sc.innerHTML = '';
+  const rem = view.counts ? view.counts.remaining : 0;
+  const known = view.counts && view.counts.live != null;
+  for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
+  const lbl = known ? `${rem} 发 · 🔴${view.counts.live} ⚪${view.counts.blank}` : `剩 ${rem} 发`;
+  sc.insertAdjacentHTML('beforeend', `<span class="cnum">${lbl}</span>`);
+
+  /* ---- 我的道具格 ---- */
+  const mineSeat = view.seats.find(s => s.id === ME.key);
+  const slots = $('mySlots'); slots.innerHTML = '';
+  if (mineSeat && mineSeat.items) {
+    for (let k = 0; k < 8; k++) {
+      const it = mineSeat.items[k];
+      slots.insertAdjacentHTML('beforeend',
+        it && it !== 'unknown' ? `<i class="on">${ICON[it] || '❔'}</i>` : '<i></i>');
+    }
+  }
+
+  /* ---- 底部按钮 ---- */
   const bar = $('gBar'); bar.innerHTML = '';
-  const mine = view.seats.find(s => s.id === ME.key);
   const myTurn = view.turn === ME.key && !view.over;
   const others = view.seats.filter(s => s.id !== ME.key && s.alive);
+  const hand = $('gHand'); hand.innerHTML = '';
+
   if (view.over) {
-    const w = view.seats.find(s => s.id === view.winner);
     $('gOver').classList.remove('hidden');
+    const w = view.seats.find(s => s.id === view.winner);
     $('gOver').innerHTML = `<div class="big">${w ? '🏆 ' + esc(w.name) : '全员阵亡'}</div>
-      <div class="txt">${w && w.id === ME.key ? '你活到了最后' : (mine ? '下一局再来' : '看完了，散场吧')}</div>
+      <div class="txt">${w && w.id === ME.key ? '你活到了最后' : (mineSeat ? '下一局再来' : '看完了，散场吧')}</div>
       ${HOST
         ? '<button class="primary" onclick="rematch()">再来一局</button><button onclick="location.reload()">回主页</button>'
         : '<button class="primary" onclick="backLobby()">回大厅等房主</button><button onclick="location.reload()">回主页</button>'}`;
@@ -1048,28 +1173,40 @@ function renderGame(){
     } else if (myTurn) {
       bar.insertAdjacentHTML('beforeend', `<button class="self" data-shoot="${ME.key}">🔫 射自己（被封缄：不能用道具）</button>`);
       others.forEach(s => bar.insertAdjacentHTML('beforeend', `<button class="foe" data-shoot="${s.id}">🔫 射 ${esc(s.name)}</button>`));
-    } else if (!mine) {
-      bar.insertAdjacentHTML('beforeend', `<div class="hint" style="padding:8px">👀 观战中 · 只能看，别急</div>`);
+    } else if (!mineSeat) {
+      bar.insertAdjacentHTML('beforeend', '<div class="hint" style="padding:8px">👀 观战中 · 只能看，别急</div>');
     } else {
       const t = view.seats.find(s => s.id === view.turn);
       bar.insertAdjacentHTML('beforeend', `<div class="hint" style="padding:8px">${t ? esc(t.name) + ' 的回合…' : '结算中…'}</div>`);
     }
+    bar.querySelectorAll('[data-shoot]').forEach(b => b.onclick = () => doAct({ kind: 'shoot', target: b.dataset.shoot }));
   }
-  bar.querySelectorAll('[data-shoot]').forEach(b => b.onclick = () => doAct({ kind:'shoot', target:b.dataset.shoot }));
 
-  // 手牌
-  const hand = $('gHand'); hand.innerHTML = '';
-  if (mine && mine.items) {
-    mine.items.forEach((it, i) => {
+  /* ---- 手牌 ---- */
+  if (mineSeat && mineSeat.items) {
+    const can = myTurn && !view.me?.sealed;
+    mineSeat.items.forEach((it, i) => {
       if (it === 'unknown') return;
-      const can = myTurn && !view.me?.sealed && !view.extraAction;
       hand.insertAdjacentHTML('beforeend',
-        `<div class="it ${can?'':'dim'}" data-item="${it}" data-i="${i}"><span>${ICON[it]||'❔'}</span>${ITEM_NAME[it]||it}</div>`);
+        `<div class="it ${can ? '' : 'dim'}" data-item="${it}" data-i="${i}"><span>${ICON[it] || '❔'}</span>${ITEM_NAME[it] || it}</div>`);
     });
-    if (!mine.items.length) hand.innerHTML = '<div class="tips">背包空的，先开枪吧</div>';
+    if (!mineSeat.items.length) hand.innerHTML = '<div class="tips">背包空的，先开枪吧</div>';
+    hand.querySelectorAll('.it').forEach(el => { if (el.classList.contains('dim')) return; el.onclick = () => pickItem(el.dataset.item); });
   }
-  hand.querySelectorAll('.it').forEach(el => { if (el.classList.contains('dim')) return; el.onclick = () => pickItem(el.dataset.item); });
-  $('gTip').textContent = view.me?.sealed ? '你被封缄了：本回合只能开枪' : (view.extraAction ? '额外行动只能开枪' : '');
+  const tipEl = $('gTip');
+  if (tipEl) tipEl.textContent = view.me?.sealed ? '你被封缄了：本回合只能开枪' : (view.extraAction ? '额外行动只能开枪' : '');
+
+  /* ---- 动画：只播新事件 ---- */
+  const evs = view.ev || [];
+  if (LAST.seq == null) LAST.seq = evs.length ? evs[evs.length - 1].seq : 0;
+  const fresh = evs.filter(e => e.seq > LAST.seq);
+  if (evs.length) LAST.seq = evs[evs.length - 1].seq;
+  fresh.forEach(e => {
+    if (e.type === 'shot') {
+      const pos = Object.keys(assign).find(p => assign[p] && assign[p].id === e.victim);
+      if (pos) playShot(pos, e.shell === 'live');
+    }
+  });
 }
 
 function pickItem(item){
@@ -1153,7 +1290,7 @@ if (location.search.includes('demo')) {
   engine.grantAll();
   feed=['装填 8 发（3 实 5 空）','阿强 使用 放大镜'];
   chat=[{from:'小美',text:'这枪稳不稳？'}];
-  view = { ...engine.view('me'), room: ROOM };
+  view = { ...engine.view('me'), room: ROOM, ev: engine.events.slice(-5) };
   show('game'); renderGame(); renderLogs();
 }
 
