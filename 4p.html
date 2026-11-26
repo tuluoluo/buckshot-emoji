@@ -114,10 +114,10 @@ button:disabled{opacity:.45;pointer-events:none}
   transition:transform .34s cubic-bezier(.3,.9,.35,1.15)}
 #gun{position:absolute;left:2px;top:14px;font-size:clamp(38px,8.6vmin,54px);line-height:1;
   filter:drop-shadow(0 5px 8px #0009)}
-#rigHand{position:absolute;left:42px;top:32px;font-size:22px;opacity:0;
+#rigHand{position:absolute;left:46px;top:36px;font-size:24px;opacity:0;filter:drop-shadow(0 0 4px #000c);
   transform:scale(.6) rotate(-10deg);transition:opacity .15s,transform .15s}
 #rigHand.on{opacity:1;transform:scale(1) rotate(-10deg)}
-#rigHand2{position:absolute;left:56px;top:28px;font-size:20px;opacity:0;
+#rigHand2{position:absolute;left:60px;top:30px;font-size:22px;opacity:0;filter:drop-shadow(0 0 4px #000c);
   transform:scale(.6) rotate(10deg) scaleX(-1);transition:opacity .15s,transform .15s}
 #rigHand2.on{opacity:1;transform:scale(1) rotate(10deg) scaleX(-1)}
 #flash{position:absolute;left:-38px;top:10px;font-size:32px;opacity:0}
@@ -139,6 +139,8 @@ button:disabled{opacity:.45;pointer-events:none}
 #shells{position:absolute;left:50%;top:72%;transform:translateX(-50%);z-index:5;display:flex;gap:5px;align-items:center}
 .sh{width:19px;height:10px;border-radius:4px;background:linear-gradient(90deg,#9a9a9a,#5f5f5f);
   box-shadow:inset 0 -3px 0 #0006,0 2px 3px #0006}
+.sh.live{background:linear-gradient(90deg,#ff6b5e,#b52f26)}
+.sh.blank{background:linear-gradient(90deg,#9cd0f5,#3d7ea8)}
 .sh.drop{animation:shDrop .26s backwards}
 @keyframes shDrop{0%{opacity:0;transform:translateY(-14px) scaleX(.4)}60%{opacity:1;transform:translateY(2px) scaleX(1.08)}100%{transform:translateY(0)}}
 .cnum{font-size:10px;color:#dfe8d9;background:#0009;padding:1px 7px;border-radius:20px;margin-left:4px;white-space:nowrap}
@@ -1063,6 +1065,13 @@ function renderLogs(){
 
 const POS = ['s-bot','s-left','s-top','s-right'];
 let LAST = { seq: null };
+function mixShells(a, seed){
+  let s = (seed >>> 0) || 1;
+  const r = () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const b = a.slice();
+  for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
+  return b;
+}
 const POSMAP = { 4: ['bot','left','top','right'], 3: ['bot','left','right'], 2: ['bot','top'] };
 const DIRS = {
   bot:   { dx: 0,   dy: 26,  deg: -90, aim: 'down'  },
@@ -1088,19 +1097,59 @@ function faceHurt(pos){
   const el = box.querySelector('.face'); if (!el) return;
   el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
 }
-/* 举枪 → 开火 → 放下：单人版那一套，方向按座位来 */
-function playShot(pos, bleed){
-  const dir = DIRS[pos] || DIRS.top;
-  const aim = $('aim');
-  aim.className = dir.aim;
-  rigMove(dir, 0);
+/* 举枪 → 开火 → 放下：桌沿上那两只手真的滑到枪柄上，跟单人版同一套 */
+const HANDS_OF = { bot: ['hPL', 'hPR'], top: ['hTL', 'hTR'], left: ['hL'], right: ['hR'] };
+let FXBUSY = false;
+const sleepMs = ms => new Promise(r => setTimeout(r, ms));
+
+function handsClear(){
+  Object.values(HANDS_OF).flat().forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.style.left = ''; el.style.top = ''; el.style.bottom = ''; el.style.transform = ''; el.style.opacity = '';
+  });
+}
+async function playShot(byPos, victimPos, bleed){
+  if (FXBUSY) return;
+  FXBUSY = true;
+  const shootPos = byPos || victimPos;
+  const handIds = HANDS_OF[shootPos] || HANDS_OF.bot;
+  const hands = handIds.map($).filter(Boolean);
+
+  // 1. 桌沿上的手滑到枪柄
+  hands.forEach((h, i) => {
+    const n = hands.length;
+    h.style.left = n === 1 ? '50%' : (i === 0 ? '44%' : '56%');
+    h.style.top = '47%';
+    h.style.bottom = 'auto';
+    h.style.transform = 'translate(-50%,-50%) scale(1.12)';
+    h.style.opacity = '.95';
+  });
+  await sleepMs(300);
+
+  // 2. 手贴到枪上 → 换双 ✊
+  hands.forEach(h => { h.style.opacity = '0'; });
   $('rigHand').classList.add('on'); $('rigHand2').classList.add('on');
-  setTimeout(() => { flashFx(); rigMove(dir, 9); if (bleed) faceHurt(pos); }, 300);
-  setTimeout(() => {
-    aim.className = '';
-    rigMove({ dx: 0, dy: 0, deg: 0 }, 0);
-    $('rigHand').classList.remove('on'); $('rigHand2').classList.remove('on');
-  }, 880);
+
+  // 3. 举枪瞄准
+  const dir = DIRS[victimPos] || DIRS.top;
+  $('aim').className = dir.aim;
+  rigMove(dir, 0);
+  await sleepMs(280);
+
+  // 4. 开火
+  flashFx();
+  rigMove(dir, 9);
+  if (bleed) faceHurt(victimPos);
+  await sleepMs(430);
+
+  // 5. 放下，手回桌沿
+  $('aim').className = '';
+  rigMove({ dx: 0, dy: 0, deg: 0 }, 0);
+  $('rigHand').classList.remove('on'); $('rigHand2').classList.remove('on');
+  handsClear();
+  await sleepMs(200);
+  FXBUSY = false;
 }
 
 function renderGame(){
@@ -1142,7 +1191,15 @@ function renderGame(){
   const sc = $('shells'); sc.innerHTML = '';
   const rem = view.counts ? view.counts.remaining : 0;
   const known = view.counts && view.counts.live != null;
-  for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
+  if (known) {
+    const shellView = mixShells(
+      [...Array(view.counts.live).fill('live'), ...Array(view.counts.blank).fill('blank')],
+      view.round * 977 + rem * 31
+    );
+    shellView.forEach(k => sc.insertAdjacentHTML('beforeend', `<span class="sh ${k}"></span>`));
+  } else {
+    for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
+  }
   const lbl = known ? `${rem} 发 · 🔴${view.counts.live} ⚪${view.counts.blank}` : `剩 ${rem} 发`;
   sc.insertAdjacentHTML('beforeend', `<span class="cnum">${lbl}</span>`);
   const dropped = LAST.rem != null && rem > LAST.rem;
@@ -1223,8 +1280,9 @@ function renderGame(){
   if (evs.length) LAST.seq = evs[evs.length - 1].seq;
   fresh.forEach(e => {
     if (e.type === 'shot') {
-      const pos = Object.keys(assign).find(p => assign[p] && assign[p].id === e.victim);
-      if (pos) playShot(pos, e.shell === 'live');
+      const vPos = Object.keys(assign).find(p => assign[p] && assign[p].id === e.victim);
+      const bPos = Object.keys(assign).find(p => assign[p] && assign[p].id === e.by);
+      playShot(bPos, vPos, e.shell === 'live');
     }
   });
 }
