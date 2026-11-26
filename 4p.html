@@ -143,6 +143,11 @@ button:disabled{opacity:.45;pointer-events:none}
 @keyframes shDrop{0%{opacity:0;transform:translateY(-14px) scaleX(.4)}60%{opacity:1;transform:translateY(2px) scaleX(1.08)}100%{transform:translateY(0)}}
 .cnum{font-size:10px;color:#dfe8d9;background:#0009;padding:1px 7px;border-radius:20px;margin-left:4px;white-space:nowrap}
 
+/* 桌内小电子屏 */
+.sb{position:absolute;left:10px;bottom:64px;z-index:5;background:#0d0f0d;border:2px solid #3a3a33;
+  border-radius:7px;padding:3px 7px;font-size:9.5px;line-height:1.55;color:#7dffb0;
+  font-family:ui-monospace,Menlo,monospace;letter-spacing:1px;opacity:.95;pointer-events:none}
+.sb b{color:#b8ffd2;font-weight:400}
 /* 我的道具格 */
 #mySlots{position:absolute;left:50%;bottom:30px;transform:translateX(-50%);display:flex;gap:5px;flex-wrap:wrap;
   justify-content:center;width:180px;z-index:5}
@@ -235,6 +240,7 @@ button:disabled{opacity:.45;pointer-events:none}
       <span class="idleHand" id="hTR">🤚</span>
       <span class="idleHand" id="hL">🤚</span>
       <span class="idleHand" id="hR">🤚</span>
+      <div class="sb" id="sbScreen"></div>
       <div id="mySlots"></div>
       <div class="facebox" id="fbBot"><div class="face">🙂</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
       <div class="facebox" id="fbTop"><div class="face">😈</div><div class="fmeta"><span class="nm"></span><span class="hpb"></span><span class="idots"></span></div></div>
@@ -1139,6 +1145,20 @@ function renderGame(){
   for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
   const lbl = known ? `${rem} 发 · 🔴${view.counts.live} ⚪${view.counts.blank}` : `剩 ${rem} 发`;
   sc.insertAdjacentHTML('beforeend', `<span class="cnum">${lbl}</span>`);
+  const dropped = LAST.rem != null && rem > LAST.rem;
+  LAST.rem = rem;
+  if (dropped) sc.querySelectorAll('.sh').forEach(sh => sh.classList.add('drop'));
+
+  /* ---- 桌内电子屏 ---- */
+  const sbEl = $('sbScreen');
+  if (sbEl) {
+    const meS = view.seats.find(x => x.id === ME.key);
+    const t = view.seats.find(x => x.id === view.turn);
+    sbEl.innerHTML =
+      `ROUND <b>${view.round}</b><br>实 <b>${known ? view.counts.live : '?'}</b> 空 <b>${known ? view.counts.blank : '?'}</b><br>` +
+      (meS ? `BAG <b>${meS.items.filter(i => i !== 'unknown').length}/8</b><br>` : '') +
+      `TURN <b>${t ? esc(t.name).slice(0, 8) : '-'}</b>`;
+  }
 
   /* ---- 我的道具格 ---- */
   const mineSeat = view.seats.find(s => s.id === ME.key);
