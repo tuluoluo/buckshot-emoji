@@ -175,10 +175,10 @@
   #speechBar.blank #speechTx{color:#6b5b7c;}
 
   /* ---- 电子屏 ---- */
-  .scoreboard{position:absolute; left:8px; top:34%; z-index:5;
-    background:#0d0f0d; border:2px solid #3a3a33; border-radius:8px; padding:5px 8px;
-    font-size:11px; line-height:1.75; color:#7dffb0; font-family:monospace; letter-spacing:1px;}
-  .scoreboard .r{display:flex; gap:6px; justify-content:space-between; min-width:92px;}
+  .scoreboard{position:relative; flex:none; display:flex; align-items:center; justify-content:center;
+    gap:14px; width:100%; background:#0d0f0d; border:1px solid #3a3a33; border-radius:9px; padding:4px 10px;
+    font-size:11px; line-height:1.5; color:#7dffb0; font-family:monospace; letter-spacing:1px; z-index:5;}
+  .scoreboard .r{display:flex; gap:5px; align-items:center; min-width:0;}
   .scoreboard .lbl{color:#7fbf9c;}
 
   /* ---- 子弹盘（右侧竖排） ---- */
@@ -488,6 +488,13 @@
     <span id="speechTx"></span>
   </div>
 
+  <div class="scoreboard" id="sbBar">
+        <div class="r"><span class="lbl">DEALER</span><span id="sbDealer"></span></div>
+    <div class="r"><span class="lbl">PLAYER</span><span id="sbPlayer"></span></div>
+    <div class="r"><span class="lbl">PHONE</span><span id="sbPhone" class="phone">—</span></div>
+    <div class="r"><span class="lbl">BAG</span><span id="sbBag">0/8</span></div>
+  </div>
+
   <div id="room">
     <div id="vignette"></div>
     <div class="lamp"><div class="cord"></div><div class="bulb">💡</div><div class="beam"></div></div>
@@ -503,12 +510,7 @@
 
         <div id="shells"></div>
 
-        <div class="scoreboard">
-          <div class="r"><span class="lbl">DEALER</span><span id="sbDealer"></span></div>
-          <div class="r"><span class="lbl">PLAYER</span><span id="sbPlayer"></span></div>
-          <div class="r"><span class="lbl">PHONE</span><span id="sbPhone" class="phone">—</span></div>
-          <div class="r"><span class="lbl">BAG</span><span id="sbBag">0/8</span></div>
-        </div>
+
 
         <div class="slotsWrap" id="dealerSlots"></div>
         <div class="slotsWrap" id="playerSlots"></div>
