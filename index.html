@@ -307,6 +307,8 @@
 
   /* ---- 结算选项直接摆上按钮区 ---- */
   #endBar{display:none; grid-template-columns:1fr 1fr; gap:9px;}
+  #endTip{grid-column:1/-1; text-align:center; font-size:12.5px; color:#c9d3bf;
+    opacity:.9; line-height:1.5; padding:0 4px;}
   #btnBonus{background:#c08a1e;}
   #btnCash{background:#2f8f5b;}
   #endBar button{font-size:clamp(12px,3.3vw,14px); padding:11px 6px; white-space:nowrap;
@@ -540,6 +542,7 @@
   </div>
 
   <div id="endBar">
+    <div id="endTip"></div>
     <button id="btnBonus">🔁 加倍或是空手</button>
     <button id="btnCash">💰 携款离开</button>
   </div>
@@ -615,6 +618,7 @@ function makeBonusStages(){
 
 /* ================= 状态 ================= */
 let S, CASH = 0, RUN = 0, BONUS = false, BSTAGES = null, STARTAT = 0;
+let ENDTITLE = '', ENDLINE = '', ENDTIP = '';
 const $ = id => document.getElementById(id);
 const rnd = n => Math.floor(Math.random()*n);
 const pool = () => BONUS ? BONUS_IDS : BASE_IDS;
@@ -788,8 +792,8 @@ function render(){
     try{ reload(); } finally { reloading = false; }
   }
 
-  $('hudTitle').textContent = c.title;
-  $('hudSub').textContent = c.sub;
+  $('hudTitle').textContent = (S.over && ENDTITLE) ? ENDTITLE : c.title;
+  $('hudSub').textContent = (S.over && ENDLINE) ? ENDLINE : c.sub;
   showMoney();
 
   $('sbDealer').textContent = charges('dealer');
@@ -842,7 +846,7 @@ function render(){
   // 表情随血量（终局由 finish 定格，这里不覆盖）
   if(!S.over){
     $('playerFace').textContent = p.hp >= c.hp ? '🙂' : p.hp > c.hp/2 ? '😐' : p.hp > 1 ? '😰' : '😱';
-    $('dealerFace').textContent = d.hp >= c.hp ? '😈' : d.hp > c.hp/2 ? '😈' : d.hp > 1 ? '😵' : '😵‍💫';
+    $('dealerFace').textContent = d.hp >= c.hp ? '😈' : d.hp > c.hp/2 ? '😈' : d.hp > 1 ? '😠' : '😨';
   }
 
   // 按钮
@@ -939,7 +943,7 @@ function applyDamage(side, dmg){
 
 async function performShot(shooter, target){
   if(S.busy || S.over || S.transition) return false;
-  S.busy = true; busyAt = Date.now(); render();
+  S.busy = true; busyAt = Date.now(); S.shots = (S.shots || 0) + 1; render();
   try{
 
   const selfShot = target === 'self';
@@ -1407,9 +1411,20 @@ setInterval(()=>{
 function death(side){
   S.transition = true;
   const deadFace = $(side==='player'?'playerFace':'dealerFace');
-  deadFace.classList.remove('hurt','recoil');
-  deadFace.textContent = '💀';
-  deadFace.classList.add('fallen');
+  const at = relTo(deadFace);
+  /* 1) 中弹：脸上挨一下，血花溅到脸上 */
+  deadFace.classList.remove('fallen','recoil');
+  deadFace.textContent = '😵';
+  void deadFace.offsetWidth;
+  deadFace.classList.add('hurt');
+  const bloodSp = fxFly('🩸', at.x, at.y, 26, 0);
+  setTimeout(()=>{ if(bloodSp && bloodSp.remove) bloodSp.remove(); }, 1200);
+  /* 2) 倒下：0.36s 后换骷髅、斜倒 */
+  setTimeout(()=>{
+    deadFace.classList.remove('hurt');
+    deadFace.textContent = '💀';
+    deadFace.classList.add('fallen');
+  }, 360);
 
   if(S.stage === STAGES.length - 1){
     setTimeout(()=>finish(side==='dealer'), 900);
@@ -1463,6 +1478,14 @@ function restartRound(){
 function finish(win){
   S.over = true; S.transition = false;
   const c = cfg();
+  const shots = S.shots || 0;
+  ENDTITLE = win ? '🏆 你活着出去了' : '☠ 你被抬出去了';
+  ENDLINE = win
+    ? `第 ${S.stage+1} 回合结束 · 收了 ${money()}`
+    : `死在第 ${S.stage+1} 回合 · 第 ${shots} 枪 · 钱一分没带走`;
+  ENDTIP = win
+    ? `本局你开了 ${shots} 枪 · 庄家满桌躺着`
+    : `本局你开了 ${shots} 枪 · 庄家还剩 ${S.dealer.hp} 格电量`;
   /* 终局定格：死者躺下变 💀，活人回常态，桌面清场；无论输赢都做 */
   ['playerFace','dealerFace'].forEach(id=>{ const f=$(id); if(f) f.classList.remove('hurt','recoil'); });
   const deadEl = $(win?'dealerFace':'playerFace');
@@ -1606,6 +1629,7 @@ function showEndBar(mode){
   row.style.display='none';
   bar.style.display='grid';
   bar.classList.toggle('one', mode!=='win');
+  const tipEl=$('endTip'); if(tipEl) tipEl.textContent = ENDTIP;
   if(mode==='win'){
     $('btnBonus').style.display='block';
     $('btnBonus').textContent='🔁 加倍再赌';
@@ -1649,6 +1673,7 @@ function backToHall(){
 /* ================= 开局 ================= */
 function newGame(){
   S = newState();
+  ENDTITLE = ''; ENDLINE = ''; ENDTIP = '';
   EVENTS.length = 0;
   fxClear(); hideEndBar(); camIn(false);
   if($('rig')) $('rig').style.opacity='1';
