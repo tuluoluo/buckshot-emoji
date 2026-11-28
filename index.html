@@ -1510,7 +1510,7 @@ function finish(win){
       render();
     }, 1200);
   }else{
-    if(BONUS){ CASH = 0; showMoney(); }
+    CASH = 0; BONUS = false; RUN = 0; BSTAGES = null; showMoney();
     say('dealer', LINES.lose[0]);
     setTimeout(()=>{
       showEndBar('lose');
