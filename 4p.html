@@ -63,8 +63,8 @@ button:disabled{opacity:.45;pointer-events:none}
 .ghead .sp{flex:1}
 .ghead button{padding:6px 10px;font-size:12px;border-radius:8px}
 /* ===== 赌桌：沿用单人版美术 ===== */
-.gWrap{position:relative;flex:none;box-sizing:border-box;width:min(780px,96vw);padding:clamp(34px,5.2vh,54px) 44px clamp(58px,10.5vh,92px);display:flex;justify-content:center}
-#felt{position:relative;width:100%;height:clamp(210px,56vh,330px);border-radius:14px;border:7px solid #4a3122;
+.gWrap{position:relative;flex:none;box-sizing:border-box;width:min(780px,97vw);padding:clamp(28px,4.2vh,44px) 42px clamp(50px,8.4vh,74px);display:flex;justify-content:center}
+#felt{position:relative;width:100%;height:clamp(230px,55vh,380px);border-radius:14px;border:7px solid #4a3122;
   box-shadow:inset 0 0 40px #0008,0 8px 22px #0008,0 0 0 3px #2a1a12;
   background:
     repeating-linear-gradient(0deg,transparent 0 62px,#ffffff1a 62px 63px),
@@ -1168,7 +1168,7 @@ function renderGame(){
     if (!s) { box.classList.add('hidden'); return; }
     box.classList.remove('hidden');
     const face = box.querySelector('.face');
-    face.textContent = s.alive ? (s.ai ? '🤖' : (s.id === ME.key ? '🙂' : '😈')) : '😵';
+    face.textContent = s.alive ? (s.ai ? '🤖' : (s.id === ME.key ? '🙂' : '😈')) : '💀';
     box.classList.toggle('turn', s.id === view.turn && !view.over);
     box.classList.toggle('dead', !s.alive);
     box.querySelector('.nm').textContent =
@@ -1183,25 +1183,32 @@ function renderGame(){
 
   /* ---- 手：上下面各两只，两侧各一只 ---- */
   const handOn = (id, on) => { const el = $(id); if (el) el.style.opacity = on ? '.95' : '0'; };
-  handOn('hPL', !!assign.bot); handOn('hPR', !!assign.bot);
-  handOn('hTL', !!assign.top); handOn('hTR', !!assign.top);
-  handOn('hL', !!assign.left); handOn('hR', !!assign.right);
+  const live = !view.over;
+  if (!live) { ['hPL','hPR','hTL','hTR','hL','hR'].forEach(id => { const el = $(id); if (el) el.style.opacity = '0'; }); }
+  handOn('hPL', live && !!assign.bot); handOn('hPR', live && !!assign.bot);
+  handOn('hTL', live && !!assign.top); handOn('hTR', live && !!assign.top);
+  handOn('hL', live && !!assign.left); handOn('hR', live && !!assign.right);
+  const rigEl0 = $('rig'); if (rigEl0) rigEl0.style.opacity = live ? '' : '0';
 
   /* ---- 弹仓 ---- */
   const sc = $('shells'); sc.innerHTML = '';
   const rem = view.counts ? view.counts.remaining : 0;
   const known = view.counts && view.counts.live != null;
-  if (known) {
-    const shellView = mixShells(
-      [...Array(view.counts.live).fill('live'), ...Array(view.counts.blank).fill('blank')],
-      view.round * 977 + rem * 31
-    );
-    shellView.forEach(k => sc.insertAdjacentHTML('beforeend', `<span class="sh ${k}"></span>`));
+  if (view.over) {
+    sc.insertAdjacentHTML('beforeend', '<span class="cnum">对局结束</span>');
   } else {
-    for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
+    if (known) {
+      const shellView = mixShells(
+        [...Array(view.counts.live).fill('live'), ...Array(view.counts.blank).fill('blank')],
+        view.round * 977 + rem * 31
+      );
+      shellView.forEach(k => sc.insertAdjacentHTML('beforeend', `<span class="sh ${k}"></span>`));
+    } else {
+      for (let i = 0; i < rem; i++) sc.insertAdjacentHTML('beforeend', '<span class="sh"></span>');
+    }
+    const lbl = known ? `${rem} 发 · 🔴${view.counts.live} ⚪${view.counts.blank}` : `剩 ${rem} 发`;
+    sc.insertAdjacentHTML('beforeend', `<span class="cnum">${lbl}</span>`);
   }
-  const lbl = known ? `${rem} 发 · 🔴${view.counts.live} ⚪${view.counts.blank}` : `剩 ${rem} 发`;
-  sc.insertAdjacentHTML('beforeend', `<span class="cnum">${lbl}</span>`);
   const dropped = LAST.rem != null && rem > LAST.rem;
   LAST.rem = rem;
   if (dropped) sc.querySelectorAll('.sh').forEach(sh => sh.classList.add('drop'));
