@@ -126,7 +126,7 @@
   .face.fallen{animation:faceFall .7s forwards;}
   @keyframes faceRecoil{0%{transform:translateX(-50%) translateY(0)}35%{transform:translateX(-50%) translateY(8px) rotate(6deg)}100%{transform:translateX(-50%) translateY(0)}}
   @keyframes faceHurt{0%,100%{transform:translateX(-50%)}20%{transform:translateX(-50%) translateX(-7px)}40%{transform:translateX(-50%) translateX(7px)}60%{transform:translateX(-50%) translateX(-5px)}80%{transform:translateX(-50%) translateX(5px)}}
-  @keyframes faceFall{to{transform:translateX(-50%) rotate(78deg) translate(6px,10px); opacity:.6;}}
+  @keyframes faceFall{to{transform:translateX(-50%) rotate(-13deg) scale(.97); opacity:.7;}}
 
   /* ---- 手 ---- */
   .idleHand{position:absolute; font-size:48px; z-index:6; opacity:.95;
@@ -536,9 +536,6 @@
       <div class="face" id="dealerFace">😈</div>
       <div class="face" id="playerFace">🙂</div>
       <div id="stageFx"></div>
-
-
-      <div id="stageFx"></div>
     </div>
   </div>
 
@@ -809,7 +806,7 @@ function render(){
   let k = 0;
   for(let i=0;i<live;i++) sh += `<span class="sh live${drop?' drop':''}" style="animation-delay:${k++*80}ms"></span>`;
   for(let i=0;i<blank;i++) sh += `<span class="sh blank${drop?' drop':''}" style="animation-delay:${k++*80}ms"></span>`;
-  $('shells').innerHTML = sh;
+  $('shells').innerHTML = S.over ? '' : sh;
   if(drop && S.chamber.length) S.shellAnimDone = true;
 
   // 道具格
@@ -842,9 +839,11 @@ function render(){
     handsOf(sd).forEach(hid=>{ const el=$(hid); if(el) el.classList.toggle('cuffed', !!S[sd].locked); });
   });
 
-  // 表情随血量
-  $('playerFace').textContent = p.hp >= c.hp ? '🙂' : p.hp > c.hp/2 ? '😐' : p.hp > 1 ? '😰' : '😱';
-  $('dealerFace').textContent = d.hp >= c.hp ? '😈' : d.hp > c.hp/2 ? '😈' : d.hp > 1 ? '😵' : '😵‍💫';
+  // 表情随血量（终局由 finish 定格，这里不覆盖）
+  if(!S.over){
+    $('playerFace').textContent = p.hp >= c.hp ? '🙂' : p.hp > c.hp/2 ? '😐' : p.hp > 1 ? '😰' : '😱';
+    $('dealerFace').textContent = d.hp >= c.hp ? '😈' : d.hp > c.hp/2 ? '😈' : d.hp > 1 ? '😵' : '😵‍💫';
+  }
 
   // 按钮
   const ok = !S.over && !S.busy && !S.transition && S.turn==='player' && S.chamber.length>0;
@@ -1407,7 +1406,10 @@ setInterval(()=>{
 /* ================= 死亡 / 回合推进 ================= */
 function death(side){
   S.transition = true;
-  $(side==='player'?'playerFace':'dealerFace').classList.add('fallen');
+  const deadFace = $(side==='player'?'playerFace':'dealerFace');
+  deadFace.classList.remove('hurt','recoil');
+  deadFace.textContent = '💀';
+  deadFace.classList.add('fallen');
 
   if(S.stage === STAGES.length - 1){
     setTimeout(()=>finish(side==='dealer'), 900);
@@ -1461,6 +1463,23 @@ function restartRound(){
 function finish(win){
   S.over = true; S.transition = false;
   const c = cfg();
+  /* 终局定格：死者躺下变 💀，活人回常态，桌面清场；无论输赢都做 */
+  ['playerFace','dealerFace'].forEach(id=>{ const f=$(id); if(f) f.classList.remove('hurt','recoil'); });
+  const deadEl = $(win?'dealerFace':'playerFace');
+  const liveEl = $(win?'playerFace':'dealerFace');
+  if(deadEl){ deadEl.textContent='💀'; deadEl.classList.add('fallen'); }
+  if(liveEl){ liveEl.classList.remove('fallen'); liveEl.textContent = win?'🙂':'😈'; }
+  const rigEl=$('rig'); if(rigEl) rigEl.style.visibility='hidden';
+  allHands(el=>el.style.opacity='0');
+  ['dealerSlots','playerSlots'].forEach(id=>{ const w=$(id); if(w) w.style.opacity='0'; });
+  const shEl=$('shells'); if(shEl) shEl.innerHTML='';
+  S.chamber = [];
+  S.player.items = []; S.dealer.items = [];
+  const sbB=$('sbBag'); if(sbB) sbB.textContent = '0/8';
+  const sbP=$('sbPlayer'), sbD=$('sbDealer');
+  if(sbP) sbP.textContent = charges('player');
+  if(sbD) sbD.textContent = charges('dealer');
+  const rigO=$('rig'); if(rigO) rigO.style.opacity='0';
   if(win){
     const took = Math.max(1, Math.round((Date.now()-STARTAT)/1000));
     const gain = BONUS ? Math.max(2000, CASH*2) : scoreMoney();
@@ -1595,8 +1614,8 @@ function showEndBar(mode){
     $('btnCash').onclick=()=>{ hideEndBar(); leaveWithCash(); };
   }else if(mode==='lose'){
     $('btnBonus').style.display='none';
-    $('btnCash').textContent='🚪 重新入座';
-    $('btnCash').onclick=()=>{ hideEndBar(); backToHall(); };
+    $('btnCash').textContent='🔄 再来一局';
+    $('btnCash').onclick=()=>{ hideEndBar(); newGame(); };
   }else{
     $('btnBonus').style.display='none';
     $('btnCash').textContent='🚪 出门回家';
